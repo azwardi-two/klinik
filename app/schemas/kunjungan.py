@@ -1,7 +1,10 @@
+from typing import Optional
+
 from pydantic import BaseModel
 from datetime import date
 
 class KunjunganCreate(BaseModel):
-    idpasien: int
-    tanggal_kunjungan: date
+    idpasien:  Optional[int] = None
     keluhan: str
+    tgl_kunjungan: date
+   

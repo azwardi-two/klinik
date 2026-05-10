@@ -5,10 +5,10 @@ class Counter(Base):
     __tablename__ = "counter"
 
     id = Column(Integer, primary_key=True)
-    key = Column(String(50))
-    period = Column(String(20))
-    last_value = Column(Integer, default=0)
+    key = Column("key_name",String(50))
+    period = Column("period_key",String(20))
+    last_value = Column("lastvalue",Integer, default=0)
 
     __table_args__ = (
-        UniqueConstraint("key", "period", name="uq_counter_key_period"),
+        UniqueConstraint("key_name", "period_key", name="uq_counter_key_period"),
     )
