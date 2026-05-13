@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Kunjungan Klinik</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f6f9;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        input, textarea, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .hasil-item {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 6px;
+            background: #e9f7ef;
+        }
+
+        .error {
+            background: #fdecea;
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h2>Registrasi Kunjungan</h2>
+
+    <!-- 🔍 SEARCH PASIEN -->
+    <h3>Cari Pasien</h3>
+    <input type="text" id="searchNama" placeholder="Masukkan nama pasien">
+    <button onclick="cariPasien()">Cari</button>
+
+    <div id="hasilPencarian"></div>
+
+    <!-- ➕ FORM PASIEN BARU -->
+    <div id="formPasienBaru" style="display:none;">
+        <h3>Pasien Baru</h3>
+        <input type="text" id="namaBaru" placeholder="Nama">
+        <input type="date" id="tglLahirBaru">
+        <input type="text" id="alamatBaru" placeholder="Alamat">
+
+        <select id="jkBaru">
+            <option value="">Jenis Kelamin</option>
+            <option value="L">Laki-laki</option>
+            <option value="P">Perempuan</option>
+        </select>
+
+        <input type="text" id="noHpBaru" placeholder="No HP">
+    </div>
+
+    <hr>
+
+    <!-- 🧾 FORM KUNJUNGAN -->
+    <h3>Data Kunjungan</h3>
+
+    <input type="hidden" id="idpasien">
+
+    <input type="text" id="nama" placeholder="Nama pasien">
+    <textarea id="keluhan" placeholder="Keluhan"></textarea>
+    <input type="date" id="tgl_kunjungan">
+
+    <button onclick="kirimData()">Simpan Kunjungan</button>
+
+    <div id="result"></div>
+
+</div>
+
+<script>
+
+async function cariPasien() {
+    const nama = document.getElementById("searchNama").value;
+
+    const res = await fetch(`http://127.0.0.1:8000/pasien/search?nama=${nama}`);
+    const data = await res.json();
+
+    const hasilDiv = document.getElementById("hasilPencarian");
+    const formBaru = document.getElementById("formPasienBaru");
+
+    hasilDiv.innerHTML = "";
+
+    if (data.length > 0) {
+        // ✅ DITEMUKAN
+        formBaru.style.display = "none";
+
+        data.forEach(p => {
+            const el = document.createElement("div");
+            el.className = "hasil-item";
+
+            el.innerHTML = `
+                ${p.nama} (RM: ${p.no_rm})
+                <button onclick="pilihPasien(${p.id}, '${p.nama}')">Pilih</button>
+            `;
+
+            hasilDiv.appendChild(el);
+        });
+
+    } else {
+        // ❌ TIDAK ADA
+        hasilDiv.innerHTML = "<p>Pasien tidak ditemukan</p>";
+        formBaru.style.display = "block";
+        document.getElementById("idpasien").value = "";
+    }
+}
+
+function pilihPasien(id, nama) {
+    document.getElementById("idpasien").value = id;
+    document.getElementById("nama").value = nama;
+
+    alert("Pasien dipilih: " + nama);
+}
+
+async function kirimData() {
+
+    const idpasien = document.getElementById("idpasien").value;
+
+    const data = {
+        idpasien: idpasien ? parseInt(idpasien) : null,
+        keluhan: document.getElementById("keluhan").value,
+        tgl_kunjungan: document.getElementById("tgl_kunjungan").value
+    };
+
+    // 👉 kalau pasien baru
+    if (!idpasien) {
+        data.nama = document.getElementById("namaBaru").value;
+        data.alamat = document.getElementById("alamatBaru").value;
+        data.tgl_lahir = document.getElementById("tglLahirBaru").value;
+        data.jenis_kelamin = document.getElementById("jkBaru").value;
+        data.no_hp = document.getElementById("noHpBaru").value;
+    }
+
+    try {
+        const response = await fetch("http://127.0.0.1:8000/kunjungan/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw result;
+            resetform();
+        }
+
+        document.getElementById("result").innerHTML =
+            `<div class="result">
+                ✅ Berhasil<br>
+                No RM: ${result.no_rm}<br>
+                No Reg: ${result.no_reg}
+            </div>`;
+
+    } catch (err) {
+        document.getElementById("result").innerHTML =
+            `<div class="result error">
+                ❌ Error: ${JSON.stringify(err)}
+            </div>`;
+    }
+}
+window.onload = function () {
+    const now = new Date();
+
+    // format ke YYYY-MM-DDTHH:MM
+    const formatted = now.toISOString().slice(0,16);
+
+    document.getElementById("tgl_kunjungan").value = formatted;
+};
+
+function resetForm() {
+    // reset semua input dalam form
+    document.getElementById("formKunjungan").reset();
+
+    // clear hidden idpasien
+    document.getElementById("idpasien").value = "";
+
+    // sembunyikan form pasien baru
+    document.getElementById("formPasienBaru").style.display = "none";
+
+    // clear hasil pencarian
+    document.getElementById("result").innerHTML = "";
+
+    // isi ulang tanggal sekarang
+    setTanggalSekarang();
+}
+function setTanggalSekarang() {
+    const now = new Date();
+    const offset = now.getTimezoneOffset() * 60000;
+    const localISOTime = new Date(now - offset).toISOString().slice(0,10);
+
+    document.getElementById("tgl_kunjungan").value = localISOTime 
+    
+}
+
+</script>
+
+</body>
+</html>

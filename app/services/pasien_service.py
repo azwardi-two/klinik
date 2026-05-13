@@ -1,6 +1,7 @@
 from app.models.pasien import Pasien
 from app.services.counter_service import CounterService
 from app.core.uow import UnitOfWork
+from app.repositories.pasien import PasienRepository
 
 
 class PasienService:
@@ -29,7 +30,11 @@ class PasienService:
                 "no_rm": no_rm
             }
 
-    def search_pasien(self, keyword):
-        return self.db.query(Pasien).filter(
-            Pasien.nama.ilike(f"%{keyword}%")
-        ).all()
+
+    def search_pasien(self, nama: str):
+        repo = PasienRepository(self.db)
+
+        hasil = repo.search_by_nama(nama)
+
+        # optional: validasi / manipulasi data
+        return hasil
