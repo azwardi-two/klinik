@@ -66,13 +66,14 @@
 
     <!-- 🔍 SEARCH -->
     <h3>Cari Pasien</h3>
-    <input type="text" id="searchNama" placeholder="Masukkan nama pasien">
-    <button onclick="cariPasien()">Cari</button>
-
-    <div id="hasilPencarian"></div>
+    <select id="searchNama" onchange="onPasienSelected()">
+        <option value="">-- Pilih Pasien --</option>
+    </select>
+    <button onclick="showFormPasienBaru()" style="background:#28a745;">+ Pasien Baru</button>
 
     <!-- ➕ PASIEN BARU -->
     <div id="formPasienBaru" style="display:none;">
+        <p><em>Isi data pasien baru di bawah.</em></p>
         <h3>Pasien Baru</h3>
         <input type="text" id="namaBaru" placeholder="Nama">
         <input type="date" id="tglLahirBaru">
@@ -96,7 +97,9 @@
 
         <input type="hidden" id="idpasien">
 
-        <input type="text" id="nama" placeholder="Nama pasien" readonly>
+        <div id="wrapperNama">
+            <input type="text" id="nama" placeholder="Nama pasien" readonly>
+        </div>
 
         <textarea id="keluhan" placeholder="Keluhan" required></textarea>
 
@@ -112,41 +115,40 @@
 
 <script>
 
-// 🔍 SEARCH
-async function cariPasien() {
-    const nama = document.getElementById("searchNama").value;
-
-    const res = await fetch(`http://127.0.0.1:8000/pasien/search?nama=${nama}`);
-    const data = await res.json();
-
-    const hasilDiv = document.getElementById("hasilPencarian");
-    const formBaru = document.getElementById("formPasienBaru");
-
-    hasilDiv.innerHTML = "";
-
-    if (data.length > 0) {
-        formBaru.style.display = "none";
-
+// 🔍 LOAD DROPDOWN
+async function loadPasienDropdown() {
+    try {
+        const res = await fetch("http://127.0.0.1:8000/pasien/search?nama=");
+        const data = await res.json();
+        const select = document.getElementById("searchNama");
+        select.innerHTML = '<option value="">-- Pilih Pasien --</option>';
         data.forEach(p => {
-            const el = document.createElement("div");
-            el.className = "hasil-item";
-
-            el.innerHTML = `
-                ${p.nama} (RM: ${p.no_rm})<br>
-                <button onclick="pilihPasien(${p.id}, '${p.nama}')">Pilih</button>
-            `;
-
-            hasilDiv.appendChild(el);
+            const opt = document.createElement("option");
+            opt.value = p.id;
+            opt.setAttribute("data-nama", p.nama);
+            opt.textContent = `${p.nama} (RM: ${p.no_rm})`;
+            select.appendChild(opt);
         });
-
-    } else {
-        hasilDiv.innerHTML = "<p>Pasien tidak ditemukan</p>";
-        formBaru.style.display = "block";
-
-        // reset pasien lama
-        document.getElementById("idpasien").value = "";
-        document.getElementById("nama").value = "";
+    } catch (err) {
+        console.error("Gagal load pasien", err);
     }
+}
+
+function onPasienSelected() {
+    const select = document.getElementById("searchNama");
+    const opt = select.options[select.selectedIndex];
+    const id = opt.value;
+    if (!id) return;
+    const nama = opt.getAttribute("data-nama");
+    pilihPasien(id, nama);
+}
+
+function showFormPasienBaru() {
+    document.getElementById("formPasienBaru").style.display = "block";
+    document.getElementById("wrapperNama").style.display = "none";
+    document.getElementById("idpasien").value = "";
+    document.getElementById("nama").value = "";
+    document.getElementById("searchNama").value = "";
 }
 
 // ✅ PILIH
@@ -155,6 +157,7 @@ function pilihPasien(id, nama) {
     document.getElementById("nama").value = nama;
 
     document.getElementById("formPasienBaru").style.display = "none";
+    document.getElementById("wrapperNama").style.display = "block";
 }
 
 // 💾 SIMPAN
@@ -166,11 +169,6 @@ async function kirimData() {
     // VALIDASI
     if (!tgl) {
         alert("Tanggal wajib diisi");
-        return;
-    }
-
-    if (new Date(tgl) > new Date()) {
-        alert("Tanggal tidak boleh masa depan");
         return;
     }
 
@@ -225,7 +223,11 @@ function resetForm() {
     document.getElementById("nama").value = "";
 
     document.getElementById("formPasienBaru").style.display = "none";
-    document.getElementById("hasilPencarian").innerHTML = "";
+    document.getElementById("searchNama").value = "";
+
+    document.getElementById("wrapperNama").style.display = "block";
+
+    //document.getElementById("formPasienBaruForm").reset();
 
     setTanggalSekarang();
 }
@@ -239,7 +241,10 @@ function setTanggalSekarang() {
     document.getElementById("tgl_kunjungan").value = local;
 }
 
-window.onload = setTanggalSekarang;
+window.onload = function () {
+    setTanggalSekarang();
+    loadPasienDropdown();
+};
 
 </script>
 
