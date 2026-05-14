@@ -17,3 +17,5 @@ class Kunjungan(Base):
 
     status = Column(String(50))
     keluhan = Column(String(255))
+
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)

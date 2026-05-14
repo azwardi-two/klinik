@@ -12,7 +12,7 @@
         }
 
         .container {
-            max-width: 600px;
+            max-width: 900px;
             background: white;
             padding: 20px;
             border-radius: 10px;
@@ -55,70 +55,375 @@
             background: #fdecea;
             color: red;
         }
+
+        .login-box {
+            max-width: 360px;
+            margin: 60px auto 0;
+            text-align: center;
+        }
+        .login-box input {
+            text-align: center;
+        }
+        .login-box .btn-login {
+            background: #28a745;
+        }
+        .login-box .btn-login:hover {
+            background: #218838;
+        }
+        .login-error {
+            color: red;
+            margin-top: 8px;
+        }
+        .login-link {
+            font-size: 13px;
+            margin-top: 12px;
+        }
+        .login-link a {
+            color: #007bff;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .user-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: #e9ecef;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .user-bar .btn-logout {
+            width: auto;
+            padding: 4px 14px;
+            margin: 0;
+            background: #dc3545;
+            font-size: 13px;
+        }
+        .user-bar .btn-logout:hover {
+            background: #c82333;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filter-bar input,
+        .filter-bar button {
+            width: auto;
+            margin-top: 0;
+        }
+        .filter-bar input {
+            flex: 1;
+            min-width: 140px;
+        }
+        .filter-bar button {
+            flex-shrink: 0;
+        }
+        .btn-refresh {
+            background: #17a2b8;
+        }
+        .btn-refresh:hover {
+            background: #138496;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+            font-size: 14px;
+        }
+        th {
+            background: #007bff;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        .pagination {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .pagination button {
+            width: auto;
+            padding: 6px 12px;
+            margin-top: 0;
+        }
+        .pagination button.active {
+            background: #28a745;
+        }
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
-
 <body>
 
 <div class="container">
 
-    <h2>Registrasi Kunjungan</h2>
-
-    <!-- 🔍 SEARCH -->
-    <h3>Cari Pasien</h3>
-    <select id="searchNama" onchange="onPasienSelected()">
-        <option value="">-- Pilih Pasien --</option>
-    </select>
-    <button onclick="showFormPasienBaru()" style="background:#28a745;">+ Pasien Baru</button>
-
-    <!-- ➕ PASIEN BARU -->
-    <div id="formPasienBaru" style="display:none;">
-        <p><em>Isi data pasien baru di bawah.</em></p>
-        <h3>Pasien Baru</h3>
-        <input type="text" id="namaBaru" placeholder="Nama">
-        <input type="date" id="tglLahirBaru">
-        <input type="text" id="alamatBaru" placeholder="Alamat">
-
-        <select id="jkBaru">
-            <option value="">Jenis Kelamin</option>
-            <option value="L">Laki-laki</option>
-            <option value="P">Perempuan</option>
-        </select>
-
-        <input type="text" id="noHpBaru" placeholder="No HP">
+    <!-- LOGIN -->
+    <div id="loginSection">
+        <div class="login-box">
+            <h2>Login Klinik</h2>
+            <input type="text" id="loginUsername" placeholder="Username" autocomplete="off">
+            <input type="password" id="loginPassword" placeholder="Password">
+            <button class="btn-login" onclick="handleLogin()">Masuk</button>
+            <div class="login-error" id="loginError"></div>
+            <div class="login-link">
+                Belum punya akun? <a onclick="showRegister()">Daftar</a>
+            </div>
+        </div>
     </div>
 
-    <hr>
+    <!-- REGISTER -->
+    <div id="registerSection" style="display:none;">
+        <div class="login-box">
+            <h2>Daftar Akun</h2>
+            <input type="text" id="regUsername" placeholder="Username">
+            <input type="password" id="regPassword" placeholder="Password">
+            <input type="text" id="regFullName" placeholder="Nama Lengkap (opsional)">
+            <button class="btn-login" onclick="handleRegister()">Daftar</button>
+            <div class="login-error" id="registerError"></div>
+            <div class="login-link">
+                Sudah punya akun? <a onclick="showLogin()">Masuk</a>
+            </div>
+        </div>
+    </div>
 
-    <!-- 🧾 FORM -->
-    <form id="formKunjungan" onsubmit="event.preventDefault(); kirimData();">
+    <!-- APP (setelah login) -->
+    <div id="appSection" style="display:none;">
 
-        <h3>Data Kunjungan</h3>
-
-        <input type="hidden" id="idpasien">
-
-        <div id="wrapperNama">
-            <input type="text" id="nama" placeholder="Nama pasien" readonly>
+        <div class="user-bar">
+            <span id="userDisplay">User: <strong>-</strong></span>
+            <button class="btn-logout" onclick="handleLogout()">Logout</button>
         </div>
 
-        <textarea id="keluhan" placeholder="Keluhan" required></textarea>
+        <h2>Registrasi Kunjungan</h2>
 
-        <input type="date" id="tgl_kunjungan" required>
+        <!-- SEARCH -->
+        <h3>Cari Pasien</h3>
+        <select id="searchNama" onchange="onPasienSelected()">
+            <option value="">-- Pilih Pasien --</option>
+        </select>
+        <button onclick="showFormPasienBaru()" style="background:#28a745;">+ Pasien Baru</button>
 
-        <button type="submit">Simpan Kunjungan</button>
+        <!-- PASIEN BARU -->
+        <div id="formPasienBaru" style="display:none;">
+            <p><em>Isi data pasien baru di bawah.</em></p>
+            <h3>Pasien Baru</h3>
+            <input type="text" id="namaBaru" placeholder="Nama">
+            <input type="date" id="tglLahirBaru">
+            <input type="text" id="alamatBaru" placeholder="Alamat">
 
-    </form>
+            <select id="jkBaru">
+                <option value="">Jenis Kelamin</option>
+                <option value="L">Laki-laki</option>
+                <option value="P">Perempuan</option>
+            </select>
 
-    <div id="result"></div>
+            <input type="text" id="noHpBaru" placeholder="No HP">
+        </div>
+
+        <hr>
+
+        <!-- FORM -->
+        <form id="formKunjungan" onsubmit="event.preventDefault(); kirimData();">
+
+            <h3>Data Kunjungan</h3>
+
+            <input type="hidden" id="idpasien">
+
+            <div id="wrapperNama">
+                <input type="text" id="nama" placeholder="Nama pasien" readonly>
+            </div>
+
+            <textarea id="keluhan" placeholder="Keluhan" required></textarea>
+
+            <input type="date" id="tgl_kunjungan" required>
+
+            <button type="submit">Simpan Kunjungan</button>
+
+        </form>
+
+        <div id="result"></div>
+
+        <hr>
+
+        <h3>Daftar Kunjungan</h3>
+
+        <div class="filter-bar">
+            <input type="date" id="filterTglAwal">
+            <span>s/d</span>
+            <input type="date" id="filterTglAkhir">
+            <button class="btn-refresh" onclick="loadKunjunganList()">⟳ Refresh</button>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>No. Reg</th>
+                        <th>Nama Pasien</th>
+                        <th>Keluhan</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyKunjungan">
+                    <tr><td colspan="5">Memuat data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination" id="paginationKunjungan"></div>
+
+    </div>
 
 </div>
 
 <script>
+const BASE_URL = "http://127.0.0.1:8000";
 
-// 🔍 LOAD DROPDOWN
+// ── TOKEN ──────────────────────────────────────────────
+function getToken() {
+    return localStorage.getItem("access_token");
+}
+function setToken(token, userId, username) {
+    localStorage.setItem("access_token", token);
+    localStorage.setItem("user_id", userId);
+    localStorage.setItem("username", username);
+}
+function clearToken() {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("username");
+}
+
+// ── AUTH FETCH ─────────────────────────────────────────
+async function apiFetch(url, options = {}) {
+    const headers = options.headers || {};
+    headers["Content-Type"] = "application/json";
+    const token = getToken();
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+    }
+    const res = await fetch(url, { ...options, headers });
+    if (res.status === 401) {
+        clearToken();
+        showLogin();
+        throw new Error("Sesi habis, silakan login ulang");
+    }
+    return res;
+}
+
+// ── LOGIN / REGISTER / LOGOUT ──────────────────────────
+function showLogin() {
+    document.getElementById("loginSection").style.display = "block";
+    document.getElementById("registerSection").style.display = "none";
+    document.getElementById("appSection").style.display = "none";
+    document.getElementById("loginError").textContent = "";
+}
+function showRegister() {
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("registerSection").style.display = "block";
+    document.getElementById("appSection").style.display = "none";
+    document.getElementById("registerError").textContent = "";
+}
+
+async function handleLogin() {
+    const username = document.getElementById("loginUsername").value.trim();
+    const password = document.getElementById("loginPassword").value.trim();
+    const errEl = document.getElementById("loginError");
+    errEl.textContent = "";
+
+    if (!username || !password) {
+        errEl.textContent = "Isi username dan password";
+        return;
+    }
+
+    try {
+        const res = await fetch(`${BASE_URL}/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Login gagal");
+
+        setToken(data.access_token, data.user_id, data.username);
+        initApp();
+    } catch (err) {
+        errEl.textContent = err.message;
+    }
+}
+
+async function handleRegister() {
+    const username = document.getElementById("regUsername").value.trim();
+    const password = document.getElementById("regPassword").value.trim();
+    const fullName = document.getElementById("regFullName").value.trim();
+    const errEl = document.getElementById("registerError");
+    errEl.textContent = "";
+
+    if (!username || !password) {
+        errEl.textContent = "Isi username dan password";
+        return;
+    }
+
+    try {
+        const res = await fetch(`${BASE_URL}/auth/register`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password, full_name: fullName || null }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Registrasi gagal");
+
+        document.getElementById("loginUsername").value = username;
+        document.getElementById("loginPassword").value = "";
+        showLogin();
+        document.getElementById("loginError").textContent = "Akun berhasil dibuat, silakan login";
+        document.getElementById("loginError").style.color = "green";
+    } catch (err) {
+        errEl.textContent = err.message;
+    }
+}
+
+function handleLogout() {
+    clearToken();
+    showLogin();
+}
+
+// ── INIT APP ───────────────────────────────────────────
+function initApp() {
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("registerSection").style.display = "none";
+    document.getElementById("appSection").style.display = "block";
+    document.getElementById("userDisplay").innerHTML =
+        `User: <strong>${localStorage.getItem("username") || "-"}</strong> (ID: ${localStorage.getItem("user_id") || "-"})`;
+
+    setTanggalSekarang();
+    setTanggalFilter();
+    loadPasienDropdown();
+    loadKunjunganList();
+}
+
+// ── LOAD DROPDOWN ──────────────────────────────────────
 async function loadPasienDropdown() {
     try {
-        const res = await fetch("http://127.0.0.1:8000/pasien/search?nama=");
+        const res = await apiFetch(`${BASE_URL}/pasien/search?nama=`);
         const data = await res.json();
         const select = document.getElementById("searchNama");
         select.innerHTML = '<option value="">-- Pilih Pasien --</option>';
@@ -161,7 +466,6 @@ function showFormPasienBaru() {
     setTanggalSekarang();
 }
 
-// ✅ PILIH
 function pilihPasien(id, nama) {
     document.getElementById("idpasien").value = id;
     document.getElementById("nama").value = nama;
@@ -170,13 +474,11 @@ function pilihPasien(id, nama) {
     document.getElementById("wrapperNama").style.display = "block";
 }
 
-// 💾 SIMPAN
+// ── SIMPAN ─────────────────────────────────────────────
 async function kirimData() {
-
     const idpasien = document.getElementById("idpasien").value;
     const tgl = document.getElementById("tgl_kunjungan").value;
 
-    // VALIDASI
     if (!tgl) {
         alert("Tanggal wajib diisi");
         return;
@@ -188,7 +490,6 @@ async function kirimData() {
         tgl_kunjungan: tgl
     };
 
-    // pasien baru
     if (!idpasien) {
         data.nama = document.getElementById("namaBaru").value;
         data.alamat = document.getElementById("alamatBaru").value;
@@ -198,14 +499,12 @@ async function kirimData() {
     }
 
     try {
-        const response = await fetch("http://127.0.0.1:8000/kunjungan/", {
+        const response = await apiFetch(`${BASE_URL}/kunjungan/`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data)
         });
 
         const result = await response.json();
-
         if (!response.ok) throw result;
 
         document.getElementById("result").innerHTML =
@@ -215,7 +514,8 @@ async function kirimData() {
                 No Reg: ${result.no_reg}
             </div>`;
 
-        resetForm(); // ✅ FIX
+        resetForm();
+        loadKunjunganList();
 
     } catch (err) {
         document.getElementById("result").innerHTML =
@@ -225,37 +525,110 @@ async function kirimData() {
     }
 }
 
-// 🔄 RESET
+// ── RESET ──────────────────────────────────────────────
 function resetForm() {
     document.getElementById("formKunjungan").reset();
-
     document.getElementById("idpasien").value = "";
     document.getElementById("nama").value = "";
-
     document.getElementById("formPasienBaru").style.display = "none";
     document.getElementById("searchNama").value = "";
-
     document.getElementById("wrapperNama").style.display = "block";
-
-    //document.getElementById("formPasienBaruForm").reset();
-
     setTanggalSekarang();
 }
 
-// ⏰ DEFAULT DATE (LOCAL)
+// ── DATE HELPERS ───────────────────────────────────────
 function setTanggalSekarang() {
     const now = new Date();
     const offset = now.getTimezoneOffset() * 60000;
     const local = new Date(now - offset).toISOString().slice(0,10);
-
     document.getElementById("tgl_kunjungan").value = local;
 }
 
-window.onload = function () {
-    setTanggalSekarang();
-    loadPasienDropdown();
-};
+function setTanggalFilter() {
+    const now = new Date();
+    const offset = now.getTimezoneOffset() * 60000;
+    const local = new Date(now - offset).toISOString().slice(0,10);
+    document.getElementById("filterTglAwal").value = local;
+    document.getElementById("filterTglAkhir").value = local;
+}
 
+// ── LIST KUNJUNGAN ─────────────────────────────────────
+let kunjunganPage = 1;
+
+async function loadKunjunganList() {
+    const tglAwal = document.getElementById("filterTglAwal").value;
+    const tglAkhir = document.getElementById("filterTglAkhir").value;
+    if (!tglAwal || !tglAkhir) return;
+
+    document.getElementById("tbodyKunjungan").innerHTML =
+        '<tr><td colspan="5">Memuat data...</td></tr>';
+
+    try {
+        const url = `${BASE_URL}/kunjungan/?tgl_awal=${tglAwal}&tgl_akhir=${tglAkhir}&page=${kunjunganPage}&limit=10`;
+        const res = await apiFetch(url);
+        const result = await res.json();
+
+        renderKunjunganTable(result);
+        renderPagination(result);
+    } catch (err) {
+        document.getElementById("tbodyKunjungan").innerHTML =
+            `<tr><td colspan="5" style="color:red;">Gagal memuat data: ${err.message}</td></tr>`;
+        document.getElementById("paginationKunjungan").innerHTML = "";
+    }
+}
+
+function renderKunjunganTable(result) {
+    const tbody = document.getElementById("tbodyKunjungan");
+    if (result.data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5">Tidak ada data.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = result.data.map(r =>
+        `<tr>
+            <td>${r.tgl_kunjungan}</td>
+            <td>${r.no_reg}</td>
+            <td>${r.nama_pasien}</td>
+            <td>${r.keluhan}</td>
+            <td>${r.status}</td>
+        </tr>`
+    ).join("");
+}
+
+function renderPagination(result) {
+    const div = document.getElementById("paginationKunjungan");
+    const { page, total_pages } = result;
+    if (total_pages <= 1) {
+        div.innerHTML = "";
+        return;
+    }
+
+    let html = `<button ${page <= 1 ? 'disabled' : ''} onclick="goToPage(${page - 1})">«</button>`;
+    const maxShow = 5;
+    let start = Math.max(1, page - Math.floor(maxShow / 2));
+    let end = Math.min(total_pages, start + maxShow - 1);
+    if (end - start + 1 < maxShow) {
+        start = Math.max(1, end - maxShow + 1);
+    }
+    for (let i = start; i <= end; i++) {
+        html += `<button class="${i === page ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+    }
+    html += `<button ${page >= total_pages ? 'disabled' : ''} onclick="goToPage(${page + 1})">»</button>`;
+    div.innerHTML = html;
+}
+
+function goToPage(p) {
+    kunjunganPage = p;
+    loadKunjunganList();
+}
+
+// ── ON LOAD ────────────────────────────────────────────
+window.onload = function () {
+    if (getToken()) {
+        initApp();
+    } else {
+        showLogin();
+    }
+};
 </script>
 
 </body>
