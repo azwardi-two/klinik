@@ -44,7 +44,8 @@ class KunjunganService:
                     tgl_lahir=data.tgl_lahir,
                     jenis_kelamin=data.jenis_kelamin,
                     alamat=data.alamat,
-                    no_rm=no_rm
+                    no_rm=no_rm,
+                    no_hp=data.no_hp
                 )
                 pasien_repo.create(pasien)
 
