@@ -69,6 +69,7 @@ class KunjunganService:
 
         data = [
             {
+                "id_kunjungan": r.id_kunjungan,
                 "tgl_kunjungan": r.tgl_kunjungan,
                 "no_reg": r.no_reg_kunjungan,
                 "nama_pasien": r.nama,

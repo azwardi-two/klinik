@@ -25,6 +25,7 @@ class KunjunganRepository:
 
         rows = (
             self.db.query(
+                Kunjungan.id_kunjungan,
                 Kunjungan.tgl_kunjungan,
                 Kunjungan.no_reg_kunjungan,
                 Pasien.nama,

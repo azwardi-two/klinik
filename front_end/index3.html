@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klinik - Sistem Informasi Laboratorium</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; min-height: 100vh; display: flex; }
+        input, textarea, select, button { padding: 8px 12px; border-radius: 6px; border: 1px solid #d0d5dd; font-size: 14px; }
+        button { cursor: pointer; border: none; font-weight: 500; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 8px 12px; border: 1px solid #e0e0e0; text-align: left; }
+        th { background: #1a73e8; color: #fff; font-weight: 600; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        tr:hover { background: #e8f0fe; }
+
+        .login-page { display: flex; justify-content: center; align-items: center; min-height: 100vh; width: 100%; background: #1a73e8; }
+        .login-box { background: #fff; padding: 40px; border-radius: 12px; width: 380px; box-shadow: 0 4px 24px rgba(0,0,0,0.15); }
+        .login-box h2 { text-align: center; margin-bottom: 24px; color: #1a73e8; }
+        .login-box input { width: 100%; margin-bottom: 12px; }
+        .login-box button { width: 100%; padding: 10px; background: #1a73e8; color: #fff; font-size: 15px; }
+        .login-box button:hover { background: #1557b0; }
+        .login-box .link { text-align: center; margin-top: 12px; font-size: 13px; color: #555; }
+        .login-box .link a { color: #1a73e8; cursor: pointer; text-decoration: underline; }
+        .login-error { color: #d93025; font-size: 13px; text-align: center; margin-top: 8px; }
+        .login-success { color: #188038; font-size: 13px; text-align: center; margin-top: 8px; }
+
+        .sidebar { width: 220px; background: #1a1a2e; color: #fff; display: flex; flex-direction: column; min-height: 100vh; flex-shrink: 0; }
+        .sidebar h3 { padding: 20px 16px 12px; font-size: 16px; border-bottom: 1px solid #2d2d4e; }
+        .sidebar .user-info { padding: 12px 16px; background: #16162a; font-size: 13px; border-bottom: 1px solid #2d2d4e; }
+        .sidebar .user-info span { display: block; }
+        .sidebar .user-info .uname { font-weight: 600; color: #64b5f6; }
+        .sidebar nav a { display: block; padding: 10px 16px; color: #b0b0cc; text-decoration: none; font-size: 13px; cursor: pointer; border-left: 3px solid transparent; }
+        .sidebar nav a:hover { background: #2d2d4e; color: #fff; }
+        .sidebar nav a.active { background: #2d2d4e; color: #fff; border-left-color: #64b5f6; }
+        .sidebar nav a.logout { margin-top: auto; border-top: 1px solid #2d2d4e; color: #e57373; }
+        .sidebar nav a.logout:hover { background: #3d1f1f; }
+
+        .main { flex: 1; display: flex; flex-direction: column; }
+        .topbar { background: #fff; padding: 12px 24px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
+        .topbar h2 { font-size: 18px; color: #333; }
+        .content { padding: 20px 24px; flex: 1; overflow-y: auto; }
+
+        .section { display: none; }
+        .section.active { display: block; }
+
+        .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .card h3 { font-size: 15px; margin-bottom: 16px; color: #333; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .stat-card { background: #fff; border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .stat-card .num { font-size: 28px; font-weight: 700; color: #1a73e8; }
+        .stat-card .label { font-size: 12px; color: #666; margin-top: 4px; }
+
+        .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+        .toolbar input, .toolbar select { width: auto; min-width: 140px; }
+        .toolbar .spacer { flex: 1; }
+        .btn { padding: 7px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .btn-primary { background: #1a73e8; color: #fff; }
+        .btn-primary:hover { background: #1557b0; }
+        .btn-success { background: #188038; color: #fff; }
+        .btn-success:hover { background: #12662e; }
+        .btn-danger { background: #d93025; color: #fff; }
+        .btn-danger:hover { background: #b3261e; }
+        .btn-warning { background: #f9ab00; color: #333; }
+        .btn-warning:hover { background: #e09400; }
+        .btn-info { background: #17a2b8; color: #fff; }
+        .btn-info:hover { background: #138496; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .btn-outline { background: transparent; border: 1px solid #d0d5dd; color: #333; }
+        .btn-outline:hover { background: #f0f2f5; }
+
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+        .badge-order { background: #fef7e0; color: #e37400; }
+        .badge-proses { background: #e8f0fe; color: #1a73e8; }
+        .badge-selesai { background: #e6f4ea; color: #188038; }
+        .badge-low { background: #fce8e6; color: #d93025; }
+        .badge-normal { background: #e6f4ea; color: #188038; }
+        .badge-high { background: #fce8e6; color: #d93025; }
+        .badge-lunas { background: #e6f4ea; color: #188038; }
+        .badge-belum { background: #fef7e0; color: #e37400; }
+
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-overlay.open { display: flex; }
+        .modal { background: #fff; border-radius: 10px; width: 520px; max-width: 94vw; max-height: 85vh; overflow-y: auto; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+        .modal h3 { margin-bottom: 16px; font-size: 16px; }
+        .modal .form-group { margin-bottom: 12px; }
+        .modal .form-group label { display: block; font-size: 13px; font-weight: 500; color: #444; margin-bottom: 4px; }
+        .modal .form-group input, .modal .form-group select, .modal .form-group textarea { width: 100%; }
+        .modal .form-row { display: flex; gap: 12px; }
+        .modal .form-row .form-group { flex: 1; }
+        .modal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+        .overdue-row td { vertical-align: middle; }
+        .overdue-row .overdue-warning { color: #d93025; font-weight: 600; }
+        .overdue-row .overdue-ok { color: #188038; }
+
+        .inline-flex { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+        .mt-12 { margin-top: 12px; }
+        .mb-12 { margin-bottom: 12px; }
+        .text-muted { color: #666; font-size: 13px; }
+        .text-center { text-align: center; }
+        .w-full { width: 100%; }
+
+        .detail-section { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+        .detail-section h4 { font-size: 14px; margin-bottom: 8px; color: #333; }
+        .back-link { color: #1a73e8; cursor: pointer; font-size: 13px; margin-bottom: 12px; display: inline-block; }
+        .back-link:hover { text-decoration: underline; }
+
+        .arrow-up { color: #d93025; }
+        .arrow-down { color: #d93025; }
+        .check-ok { color: #188038; }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 56px; }
+            .sidebar h3, .sidebar .user-info span { display: none; }
+            .sidebar nav a { padding: 12px 8px; text-align: center; font-size: 11px; }
+            .sidebar nav a span { display: none; }
+            .toolbar input, .toolbar select { min-width: 100px; }
+            .modal { width: 96vw; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-page" id="loginPage">
+    <div class="login-box" id="loginSection">
+        <h2>🔬 Sistem Lab Klinik</h2>
+        <input type="text" id="loginUsername" placeholder="Username" autocomplete="off">
+        <input type="password" id="loginPassword" placeholder="Password">
+        <button onclick="handleLogin()">Masuk</button>
+        <div class="login-error" id="loginError"></div>
+        <div class="link">Belum punya akun? <a onclick="showRegister()">Daftar</a></div>
+    </div>
+    <div class="login-box" id="registerSection" style="display:none;">
+        <h2>Daftar Akun</h2>
+        <input type="text" id="regUsername" placeholder="Username">
+        <input type="password" id="regPassword" placeholder="Password">
+        <input type="text" id="regFullName" placeholder="Nama Lengkap">
+        <button onclick="handleRegister()">Daftar</button>
+        <div class="login-error" id="registerError"></div>
+        <div class="link">Sudah punya akun? <a onclick="showLogin()">Masuk</a></div>
+    </div>
+</div>
+
+<!-- APP -->
+<div id="appMain" style="display:none;">
+    <div class="sidebar">
+        <h3>🔬 Lab Klinik</h3>
+        <div class="user-info">
+            <span class="uname" id="sidebarUser">-</span>
+            <span id="sidebarUserId" style="color:#666;font-size:11px;"></span>
+        </div>
+        <nav>
+            <a onclick="showSection('dashboard')" class="active" data-section="dashboard">📊 Dashboard</a>
+            <a onclick="showSection('pemeriksaan')" data-section="pemeriksaan">🔬 Pemeriksaan</a>
+            <a onclick="showSection('paket')" data-section="paket">📦 Paket</a>
+            <a onclick="showSection('nilai-normal')" data-section="nilai-normal">📏 Nilai Normal</a>
+            <a onclick="showSection('kunjungan')" data-section="kunjungan">🏥 Kunjungan</a>
+            <a onclick="showSection('pemeriksaan-pasien')" data-section="pemeriksaan-pasien">🧪 Periksa Pasien</a>
+            <a onclick="showSection('hasil')" data-section="hasil">📋 Input Hasil</a>
+            <a onclick="showSection('tagihan')" data-section="tagihan">💰 Tagihan</a>
+            <a onclick="handleLogout()" class="logout">🚪 Logout</a>
+        </nav>
+    </div>
+    <div class="main">
+        <div class="topbar"><h2 id="pageTitle">Dashboard</h2></div>
+        <div class="content">
+
+<!-- ===== DASHBOARD ===== -->
+<div class="section active" id="sec-dashboard">
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="card">
+        <h3>⏰ Pemeriksaan Terlambat</h3>
+        <div style="overflow-x:auto;"><table><thead><tr>
+            <th>No Reg</th><th>Pasien</th><th>Item</th><th>Mulai</th><th>Seharusnya Selesai</th><th>Terlambat</th><th>Status</th>
+        </tr></thead><tbody id="tblOverdue"><tr><td colspan="7" class="text-muted">Memuat...</td></tr></tbody></table></div>
+    </div>
+</div>
+
+<!-- ===== PEMERIKSAAN ===== -->
+<div class="section" id="sec-pemeriksaan">
+    <div class="card">
+        <div class="toolbar">
+            <input type="text" id="filterPemeriksaan" placeholder="Cari pemeriksaan..." oninput="loadPemeriksaan()">
+            <div class="spacer"></div>
+            <button class="btn btn-primary" onclick="openModalPemeriksaan()">+ Tambah</button>
+        </div>
+        <div style="overflow-x:auto;"><table><thead><tr>
+            <th>Nama</th><th>Biaya</th><th>Durasi (menit)</th><th>Kategori</th><th>Aksi</th>
+        </tr></thead><tbody id="tblPemeriksaan"><tr><td colspan="5" class="text-muted">Memuat...</td></tr></tbody></table></div>
+    </div>
+</div>
+
+<!-- ===== PAKET PEMERIKSAAN ===== -->
+<div class="section" id="sec-paket">
+    <div class="card">
+        <div class="toolbar">
+            <div class="spacer"></div>
+            <button class="btn btn-primary" onclick="openModalPaket()">+ Tambah Paket</button>
+        </div>
+        <div style="overflow-x:auto;"><table><thead><tr>
+            <th>Nama Paket</th><th>Biaya</th><th>Item Pemeriksaan</th><th>Aksi</th>
+        </tr></thead><tbody id="tblPaket"><tr><td colspan="4" class="text-muted">Memuat...</td></tr></tbody></table></div>
+    </div>
+</div>
+
+<!-- ===== NILAI NORMAL ===== -->
+<div class="section" id="sec-nilai-normal">
+    <div class="card">
+        <div class="toolbar">
+            <select id="filterNilaiPemeriksaan" onchange="loadNilaiNormal()"><option value="">-- Pilih Pemeriksaan --</option></select>
+            <div class="spacer"></div>
+            <button class="btn btn-primary" onclick="openModalNilaiNormal()">+ Tambah</button>
+        </div>
+        <div style="overflow-x:auto;"><table><thead><tr>
+            <th>Pemeriksaan</th><th>JK</th><th>Usia (hari)</th><th>Tipe</th><th>Nilai Bawah</th><th>Nilai Atas</th><th>Operator</th><th>Nilai</th><th>Text</th><th>Aksi</th>
+        </tr></thead><tbody id="tblNilaiNormal"><tr><td colspan="10" class="text-muted">Memuat...</td></tr></tbody></table></div>
+    </div>
+</div>
+
+<!-- ===== KUNJUNGAN ===== -->
+<div class="section" id="sec-kunjungan">
+    <div class="card">
+        <h3>Registrasi Kunjungan</h3>
+        <div class="toolbar">
+            <select id="searchPasien" onchange="onPasienSelected()" style="flex:1;"><option value="">-- Cari & Pilih Pasien --</option></select>
+            <button class="btn btn-success" onclick="showFormPasienBaru()">+ Pasien Baru</button>
+        </div>
+        <div id="formPasienBaru" style="display:none;" class="card" style="margin-top:8px;">
+            <h4>Data Pasien Baru</h4>
+            <div class="form-row"><div class="form-group"><label>Nama</label><input type="text" id="namaBaru"></div>
+            <div class="form-group"><label>Tgl Lahir</label><input type="date" id="tglLahirBaru"></div></div>
+            <div class="form-row"><div class="form-group"><label>Jenis Kelamin</label>
+            <select id="jkBaru"><option value="">--</option><option value="L">Laki-laki</option><option value="P">Perempuan</option></select></div>
+            <div class="form-group"><label>No HP</label><input type="text" id="noHpBaru"></div></div>
+            <div class="form-group"><label>Alamat</label><textarea id="alamatBaru" rows="2"></textarea></div>
+        </div>
+        <div class="form-row" style="margin-top:8px;">
+            <div class="form-group"><label>Keluhan</label><textarea id="keluhanKunjungan" rows="2"></textarea></div>
+            <div class="form-group" style="max-width:200px;"><label>Tanggal</label><input type="date" id="tglKunjungan"></div>
+        </div>
+        <input type="hidden" id="idpasien">
+        <button class="btn btn-primary mt-12" onclick="simpanKunjungan()">💾 Simpan Kunjungan</button>
+        <div id="resultKunjungan" class="mt-12"></div>
+    </div>
+    <div class="card">
+        <h3>Daftar Kunjungan</h3>
+        <div class="toolbar">
+            <input type="date" id="filterTglAwal"><span class="text-muted">s/d</span>
+            <input type="date" id="filterTglAkhir">
+            <button class="btn btn-info" onclick="loadKunjunganList()">⟳ Refresh</button>
+        </div>
+        <div style="overflow-x:auto;"><table><thead><tr>
+            <th>Tgl</th><th>No.Reg</th><th>Pasien</th><th>Keluhan</th><th>Status</th><th>Aksi</th>
+        </tr></thead><tbody id="tblKunjungan"><tr><td colspan="6" class="text-muted">Memuat...</td></tr></tbody></table></div>
+        <div class="pagination" id="paginationKunjungan" style="display:flex;gap:4px;justify-content:center;margin-top:8px;"></div>
+    </div>
+</div>
+
+<!-- ===== PEMERIKSAAN PASIEN ===== -->
+<div class="section" id="sec-pemeriksaan-pasien">
+    <div class="card">
+        <div class="toolbar">
+            <select id="filterKunjunganPP" onchange="loadPemeriksaanPasien()" style="flex:1;"><option value="">-- Pilih Kunjungan --</option></select>
+            <div class="spacer"></div>
+            <button class="btn btn-primary" onclick="openModalAddPemeriksaan()">+ Tambah Pemeriksaan</button>
+            <button class="btn btn-info" onclick="refreshPP()">⟳</button>
+        </div>
+        <div style="overflow-x:auto;"><table><thead><tr>
+            <th>#</th><th>Jenis</th><th>Item</th><th>Biaya</th><th>Mulai</th><th>Selesai</th><th>Status</th><th>Aksi</th>
+        </tr></thead><tbody id="tblPemeriksaanPasien"><tr><td colspan="8" class="text-muted">Pilih kunjungan terlebih dahulu</td></tr></tbody></table></div>
+    </div>
+</div>
+
+<!-- ===== HASIL PEMERIKSAAN ===== -->
+<div class="section" id="sec-hasil">
+    <div class="card">
+        <div class="toolbar">
+            <select id="filterKunjunganHasil" onchange="loadHasilList()" style="flex:1;"><option value="">-- Pilih Kunjungan --</option></select>
+        </div>
+        <div style="overflow-x:auto;"><table><thead><tr>
+            <th>Item</th><th>Nilai Bawah</th><th>Nilai Atas</th><th>Nilai Value</th><th>Nilai Text</th><th>Status</th><th>Aksi</th>
+        </tr></thead><tbody id="tblHasil"><tr><td colspan="7" class="text-muted">Pilih kunjungan terlebih dahulu</td></tr></tbody></table></div>
+    </div>
+</div>
+
+<!-- ===== TAGIHAN ===== -->
+<div class="section" id="sec-tagihan">
+    <div class="card">
+        <div class="toolbar">
+            <select id="filterKunjunganTagihan" onchange="loadTagihan()" style="flex:1;"><option value="">-- Pilih Kunjungan --</option></select>
+            <button class="btn btn-primary" onclick="generateTagihan()">💰 Generate Tagihan</button>
+            <button class="btn btn-info" onclick="refreshTagihan()">⟳</button>
+        </div>
+    </div>
+    <div class="card" id="tagihanDetail" style="display:none;">
+        <h3 id="tagihanTitle">Detail Tagihan</h3>
+        <div style="overflow-x:auto;"><table><thead><tr>
+            <th>ID Pemeriksaan</th><th>Biaya</th>
+        </tr></thead><tbody id="tblTagihanDetail"></tbody></table></div>
+        <div class="mt-12" style="display:flex;justify-content:space-between;align-items:center;">
+            <strong>Total: Rp <span id="tagihanTotal">0</span></strong>
+            <span id="tagihanStatus"></span>
+            <button class="btn btn-success" id="btnBayar" onclick="bayarTagihan()">💳 Bayar</button>
+        </div>
+    </div>
+</div>
+
+        </div><!-- /content -->
+    </div><!-- /main -->
+</div><!-- /appMain -->
+
+<!-- ===== MODAL ===== -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+const BASE = "http://127.0.0.1:8000";
+
+// ── AUTH ─────────────────────────────────────────────
+function getToken() { return localStorage.getItem("access_token"); }
+function setToken(t, uid, u) { localStorage.setItem("access_token",t);localStorage.setItem("user_id",uid);localStorage.setItem("username",u); }
+function clearToken() { localStorage.removeItem("access_token");localStorage.removeItem("user_id");localStorage.removeItem("username"); }
+
+async function api(url, opts={}) {
+    const h = opts.headers || {};
+    h["Content-Type"] = "application/json";
+    const t = getToken();
+    if (t) h["Authorization"] = `Bearer ${t}`;
+    const r = await fetch(url, {...opts, headers:h});
+    if (r.status===401) { clearToken(); location.reload(); throw new Error("Sesi habis"); }
+    return r;
+}
+
+function showLogin() { document.getElementById("loginSection").style.display="block"; document.getElementById("registerSection").style.display="none"; }
+function showRegister() { document.getElementById("loginSection").style.display="none"; document.getElementById("registerSection").style.display="block"; }
+
+async function handleLogin() {
+    const u=document.getElementById("loginUsername").value.trim(), p=document.getElementById("loginPassword").value.trim();
+    const el=document.getElementById("loginError"); el.textContent="";
+    if (!u||!p) { el.textContent="Isi username dan password"; return; }
+    try {
+        const r=await fetch(`${BASE}/auth/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p})});
+        const d=await r.json();
+        if (!r.ok) throw new Error(d.detail||"Login gagal");
+        setToken(d.access_token,d.user_id,d.username); initApp();
+    } catch(e) { el.textContent=e.message; }
+}
+
+async function handleRegister() {
+    const u=document.getElementById("regUsername").value.trim(), p=document.getElementById("regPassword").value.trim(), f=document.getElementById("regFullName").value.trim();
+    const el=document.getElementById("registerError"); el.textContent="";
+    if (!u||!p) { el.textContent="Isi username dan password"; return; }
+    try {
+        const r=await fetch(`${BASE}/auth/register`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p,full_name:f||null})});
+        const d=await r.json();
+        if (!r.ok) throw new Error(d.detail||"Registrasi gagal");
+        document.getElementById("loginUsername").value=u; document.getElementById("loginPassword").value=""; showLogin();
+        document.getElementById("loginError").textContent="Akun berhasil dibuat, silakan login";
+        document.getElementById("loginError").style.color="#188038";
+    } catch(e) { el.textContent=e.message; }
+}
+
+function handleLogout() { clearToken(); document.getElementById("appMain").style.display="none"; document.getElementById("loginPage").style.display="flex"; showLogin(); }
+
+// ── NAVIGATION ──────────────────────────────────────
+function showSection(id) {
+    document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+    document.getElementById("sec-"+id).classList.add("active");
+    document.querySelectorAll(".sidebar nav a").forEach(a=>a.classList.remove("active"));
+    document.querySelector(`.sidebar nav a[data-section="${id}"]`).classList.add("active");
+    const titles={dashboard:"Dashboard",pemeriksaan:"Master Pemeriksaan",paket:"Master Paket Pemeriksaan","nilai-normal":"Nilai Normal",kunjungan:"Kunjungan","pemeriksaan-pasien":"Pemeriksaan Pasien",hasil:"Input Hasil Pemeriksaan",tagihan:"Tagihan"};
+    document.getElementById("pageTitle").textContent=titles[id]||id;
+    if (id==="dashboard") loadDashboard();
+    else if (id==="pemeriksaan") loadPemeriksaan();
+    else if (id==="paket") loadPaket();
+    else if (id==="nilai-normal") { loadPemeriksaanDropdown("filterNilaiPemeriksaan"); loadNilaiNormal(); }
+    else if (id==="kunjungan") { loadPasienDropdown(); loadKunjunganList(); }
+    else if (id==="pemeriksaan-pasien") { loadKunjunganDropdown("filterKunjunganPP", function(){ if(document.getElementById("filterKunjunganPP").value) loadPemeriksaanPasien(); }); }
+    else if (id==="hasil") { loadKunjunganDropdown("filterKunjunganHasil", function(){ if(document.getElementById("filterKunjunganHasil").value) loadHasilList(); }); }
+    else if (id==="tagihan") { loadKunjunganDropdown("filterKunjunganTagihan", function(){ if(document.getElementById("filterKunjunganTagihan").value) loadTagihan(); }); }
+}
+
+function closeModal() { document.getElementById("modalOverlay").classList.remove("open"); }
+
+// ── INIT ────────────────────────────────────────────
+function initApp() {
+    document.getElementById("loginPage").style.display="none";
+    document.getElementById("appMain").style.display="flex";
+    document.getElementById("sidebarUser").textContent=localStorage.getItem("username")||"-";
+    document.getElementById("sidebarUserId").textContent="ID: "+(localStorage.getItem("user_id")||"-");
+    const now=new Date(); const off=now.getTimezoneOffset()*60000; const loc=new Date(now-off).toISOString().slice(0,10);
+    document.getElementById("tglKunjungan").value=loc;
+    document.getElementById("filterTglAwal").value=loc; document.getElementById("filterTglAkhir").value=loc;
+    loadDashboard();
+}
+
+// ── DASHBOARD ───────────────────────────────────────
+async function loadDashboard() {
+    try {
+        const r=await api(`${BASE}/dashboard/statistik`); const d=await r.json();
+        document.getElementById("statsGrid").innerHTML=`
+            <div class="stat-card"><div class="num">${d.total_hari_ini}</div><div class="label">Hari Ini</div></div>
+            <div class="stat-card"><div class="num" style="color:#e37400;">${d.total_order}</div><div class="label">Order</div></div>
+            <div class="stat-card"><div class="num" style="color:#1a73e8;">${d.total_proses}</div><div class="label">Proses</div></div>
+            <div class="stat-card"><div class="num" style="color:#d93025;">${d.total_overdue}</div><div class="label">Overdue</div></div>
+            <div class="stat-card"><div class="num" style="color:#188038;">${d.total_selesai}</div><div class="label">Selesai</div></div>`;
+    } catch(e) { document.getElementById("statsGrid").innerHTML=`<div class="text-muted">Gagal load statistik</div>`; }
+
+    try {
+        const r=await api(`${BASE}/dashboard/overdue`); const data=await r.json();
+        const tbody=document.getElementById("tblOverdue");
+        if (!data.length) { tbody.innerHTML='<tr><td colspan="7" class="text-muted">✅ Tidak ada pemeriksaan terlambat</td></tr>'; return; }
+        tbody.innerHTML=data.map(o=>`
+            <tr class="overdue-row"><td>${o.no_reg||'-'}</td><td>${o.nama_pasien||'-'}</td>
+            <td>${o.nama_item||'-'}</td><td>${o.jam_mulai?o.jam_mulai.slice(11,19):'-'}</td>
+            <td>${o.jam_seharusnya_selesai?o.jam_seharusnya_selesai.slice(11,19):'-'}</td>
+            <td class="overdue-warning">${o.terlambat||'-'}</td><td><span class="badge badge-proses">${o.status}</span></td></tr>
+        `).join("");
+    } catch(e) { document.getElementById("tblOverdue").innerHTML=`<tr><td colspan="7" style="color:red;">Gagal load: ${e.message}</td></tr>`; }
+}
+
+// ── PEMERIKSAAN CRUD ────────────────────────────────
+let allPemeriksaan=[];
+async function loadPemeriksaan() {
+    try {
+        const r=await api(`${BASE}/pemeriksaan/`); allPemeriksaan=await r.json();
+        const q=(document.getElementById("filterPemeriksaan").value||"").toLowerCase();
+        const filtered=q?allPemeriksaan.filter(p=>p.nama_pemeriksaan.toLowerCase().includes(q)):allPemeriksaan;
+        document.getElementById("tblPemeriksaan").innerHTML=filtered.map(p=>`
+            <tr><td>${p.nama_pemeriksaan}</td><td>Rp ${(p.biaya||0).toLocaleString()}</td><td>${p.lama_waktu||0}</td>
+            <td>${p.kategori||'-'}</td>
+            <td class="inline-flex">
+                <button class="btn btn-warning btn-sm" onclick='editPemeriksaan(${JSON.stringify(p).replace(/'/g,"&#39;")})'>✏</button>
+                <button class="btn btn-danger btn-sm" onclick="hapusPemeriksaan(${p.id_pemeriksaan})">🗑</button>
+            </td></tr>
+        `).join("");
+    } catch(e) { document.getElementById("tblPemeriksaan").innerHTML=`<tr><td colspan="5" style="color:red;">${e.message}</td></tr>`; }
+}
+
+function openModalPemeriksaan(data) {
+    const isEdit=!!data;
+    document.getElementById("modalContent").innerHTML=`
+        <h3>${isEdit?'Edit':'Tambah'} Pemeriksaan</h3>
+        <div class="form-group"><label>Nama Pemeriksaan</label><input type="text" id="fPemeriksaanNama" value="${isEdit?data.nama_pemeriksaan:''}"></div>
+        <div class="form-row"><div class="form-group"><label>Biaya (Rp)</label><input type="number" id="fPemeriksaanBiaya" value="${isEdit?data.biaya:0}"></div>
+        <div class="form-group"><label>Durasi (menit)</label><input type="number" id="fPemeriksaanDurasi" value="${isEdit?data.lama_waktu:0}"></div></div>
+        <div class="form-group"><label>Kategori</label><input type="text" id="fPemeriksaanKategori" value="${isEdit?data.kategori||'':''}"></div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+            <button class="btn btn-primary" onclick="simpanPemeriksaan(${isEdit?data.id_pemeriksaan:'null'})">Simpan</button>
+        </div>`;
+    document.getElementById("modalOverlay").classList.add("open");
+}
+
+async function simpanPemeriksaan(id) {
+    const body={nama_pemeriksaan:document.getElementById("fPemeriksaanNama").value,biaya:parseInt(document.getElementById("fPemeriksaanBiaya").value)||0,lama_waktu:parseInt(document.getElementById("fPemeriksaanDurasi").value)||0,kategori:document.getElementById("fPemeriksaanKategori").value||null};
+    try {
+        if (id) { await api(`${BASE}/pemeriksaan/${id}`,{method:"PUT",body:JSON.stringify(body)}); }
+        else { await api(`${BASE}/pemeriksaan/`,{method:"POST",body:JSON.stringify(body)}); }
+        closeModal(); loadPemeriksaan();
+    } catch(e) { alert("Error: "+e.message); }
+}
+
+async function hapusPemeriksaan(id) { if(!confirm("Hapus pemeriksaan?"))return; try{await api(`${BASE}/pemeriksaan/${id}`,{method:"DELETE"});loadPemeriksaan();}catch(e){alert(e.message);} }
+
+// ── PAKET CRUD ──────────────────────────────────────
+async function loadPaket() {
+    try {
+        const r=await api(`${BASE}/paket-pemeriksaan/`); const data=await r.json();
+        document.getElementById("tblPaket").innerHTML=data.map(p=>`
+            <tr><td>${p.nama_paket}</td><td>Rp ${(p.biaya_paket||0).toLocaleString()}</td>
+            <td>${p.detail_items?p.detail_items.map(d=>d.id_pemeriksaan).join(', '):'-'}</td>
+            <td class="inline-flex">
+                <button class="btn btn-warning btn-sm" onclick='editPaket(${JSON.stringify(p).replace(/'/g,"&#39;")})'>✏</button>
+                <button class="btn btn-danger btn-sm" onclick="hapusPaket(${p.id_paket})">🗑</button>
+            </td></tr>
+        `).join("");
+    } catch(e) { document.getElementById("tblPaket").innerHTML=`<tr><td colspan="4" style="color:red;">${e.message}</td></tr>`; }
+}
+
+async function loadPemeriksaanDropdown(selectId) {
+    try {
+        const r=await api(`${BASE}/pemeriksaan/`); const data=await r.json();
+        const sel=document.getElementById(selectId);
+        if (!sel) return;
+        sel.innerHTML='<option value="">-- Pilih Pemeriksaan --</option>'+data.map(p=>`<option value="${p.id_pemeriksaan}">${p.nama_pemeriksaan}</option>`).join("");
+    } catch(e) {}
+}
+
+async function loadPemeriksaanOptions() {
+    try { const r=await api(`${BASE}/pemeriksaan/`); return await r.json(); } catch(e){return[];}
+}
+
+function openModalPaket(data) {
+    const isEdit=!!data;
+    loadPemeriksaanOptions().then(px=>{
+        const selectedIds=data&&data.detail_items?data.detail_items.map(d=>d.id_pemeriksaan):[];
+        document.getElementById("modalContent").innerHTML=`
+            <h3>${isEdit?'Edit':'Tambah'} Paket Pemeriksaan</h3>
+            <div class="form-group"><label>Nama Paket</label><input type="text" id="fPaketNama" value="${isEdit?data.nama_paket:''}"></div>
+            <div class="form-group"><label>Biaya Paket (Rp)</label><input type="number" id="fPaketBiaya" value="${isEdit?data.biaya_paket:0}"></div>
+            <div class="form-group"><label>Keterangan</label><textarea id="fPaketKet" rows="2">${isEdit?data.keterangan||'':''}</textarea></div>
+            <div class="form-group"><label>Item Pemeriksaan</label>
+            <select multiple id="fPaketItems" style="height:120px;">${px.map(p=>`<option value="${p.id_pemeriksaan}" ${selectedIds.includes(p.id_pemeriksaan)?'selected':''}>${p.nama_pemeriksaan}</option>`).join("")}</select>
+            <div class="text-muted" style="font-size:12px;">Tahan Ctrl untuk pilih banyak</div></div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+                <button class="btn btn-primary" onclick="simpanPaket(${isEdit?data.id_paket:'null'})">Simpan</button>
+            </div>`;
+        document.getElementById("modalOverlay").classList.add("open");
+    });
+}
+
+async function simpanPaket(id) {
+    const sel=document.getElementById("fPaketItems"); const items=[];
+    for(let i=0;i<sel.options.length;i++) if(sel.options[i].selected) items.push({id_pemeriksaan:parseInt(sel.options[i].value)});
+    const body={nama_paket:document.getElementById("fPaketNama").value,biaya_paket:parseInt(document.getElementById("fPaketBiaya").value)||0,keterangan:document.getElementById("fPaketKet").value||null,detail_items:items};
+    try {
+        if (id) { await api(`${BASE}/paket-pemeriksaan/${id}`,{method:"PUT",body:JSON.stringify(body)}); }
+        else { await api(`${BASE}/paket-pemeriksaan/`,{method:"POST",body:JSON.stringify(body)}); }
+        closeModal(); loadPaket();
+    } catch(e) { alert("Error: "+e.message); }
+}
+
+async function hapusPaket(id) { if(!confirm("Hapus paket?"))return; try{await api(`${BASE}/paket-pemeriksaan/${id}`,{method:"DELETE"});loadPaket();}catch(e){alert(e.message);} }
+
+// ── NILAI NORMAL ────────────────────────────────────
+async function loadNilaiNormal() {
+    const idP=document.getElementById("filterNilaiPemeriksaan").value;
+    try {
+        const url=idP?`${BASE}/nilai-normal/pemeriksaan/${idP}`:`${BASE}/nilai-normal/`;
+        const r=await api(url); const data=await r.json();
+        const px=await loadPemeriksaanOptions(); const map={}; px.forEach(p=>map[p.id_pemeriksaan]=p.nama_pemeriksaan);
+        document.getElementById("tblNilaiNormal").innerHTML=data.map(n=>`
+            <tr><td>${map[n.id_pemeriksaan]||n.id_pemeriksaan}</td><td>${n.jenis_kelamin||'-'}</td>
+            <td>${n.usia_hari_min}-${n.usia_hari_max}</td><td>${n.jenis_nilai}</td>
+            <td>${n.nilai_bawah??'-'}</td><td>${n.nilai_atas??'-'}</td><td>${n.operator||'-'}</td>
+            <td>${n.nilai_operator??'-'}</td><td>${n.nilai_text||'-'}</td>
+            <td class="inline-flex">
+                <button class="btn btn-warning btn-sm" onclick='editNilaiNormal(${JSON.stringify(n).replace(/'/g,"&#39;")})'>✏</button>
+                <button class="btn btn-danger btn-sm" onclick="hapusNilaiNormal(${n.id_nilai_normal})">🗑</button>
+            </td></tr>
+        `).join("");
+    } catch(e) { document.getElementById("tblNilaiNormal").innerHTML=`<tr><td colspan="10" style="color:red;">${e.message}</td></tr>`; }
+}
+
+function openModalNilaiNormal(data) {
+    const isEdit=!!data;
+    loadPemeriksaanDropdown("fNilaiPemeriksaan");
+    setTimeout(()=>{
+        const sel=document.getElementById("fNilaiPemeriksaan");
+        if (isEdit&&sel) sel.value=data.id_pemeriksaan;
+    },100);
+    document.getElementById("modalContent").innerHTML=`
+        <h3>${isEdit?'Edit':'Tambah'} Nilai Normal</h3>
+        <div class="form-group"><label>Pemeriksaan</label><select id="fNilaiPemeriksaan"></select></div>
+        <div class="form-row"><div class="form-group"><label>JK (kosongkan untuk semua)</label>
+        <select id="fNilaiJk"><option value="">Semua</option><option value="L" ${isEdit&&data.jenis_kelamin==='L'?'selected':''}>Laki-laki</option><option value="P" ${isEdit&&data.jenis_kelamin==='P'?'selected':''}>Perempuan</option></select></div>
+        <div class="form-group"><label>Tipe</label><select id="fNilaiTipe" onchange="toggleNilaiFields()">
+            <option value="range" ${isEdit&&data.jenis_nilai==='range'?'selected':''}>Range</option>
+            <option value="operator" ${isEdit&&data.jenis_nilai==='operator'?'selected':''}>Operator</option>
+            <option value="text" ${isEdit&&data.jenis_nilai==='text'?'selected':''}>Text</option>
+        </select></div></div>
+        <div id="nilaiRangeFields"><div class="form-row"><div class="form-group"><label>Bawah</label><input type="number" step="any" id="fNilaiBawah" value="${isEdit?data.nilai_bawah??'':''}"></div>
+        <div class="form-group"><label>Atas</label><input type="number" step="any" id="fNilaiAtas" value="${isEdit?data.nilai_atas??'':''}"></div></div></div>
+        <div id="nilaiOperatorFields" style="display:none;"><div class="form-row"><div class="form-group"><label>Operator</label>
+        <select id="fNilaiOperator"><option value="<" ${isEdit&&data.operator==='<'?'selected':''}>&lt;</option><option value=">" ${isEdit&&data.operator==='>'?'selected':''}>&gt;</option><option value="<=" ${isEdit&&data.operator==='<='?'selected':''}>&lt;=</option><option value=">=" ${isEdit&&data.operator==='>='?'selected':''}>&gt;=</option></select></div>
+        <div class="form-group"><label>Nilai</label><input type="number" step="any" id="fNilaiOperatorVal" value="${isEdit?data.nilai_operator??'':''}"></div></div></div>
+        <div id="nilaiTextField" style="display:none;"><div class="form-group"><label>Text</label><input type="text" id="fNilaiText" value="${isEdit?data.nilai_text||'':''}"></div></div>
+        <div class="form-row"><div class="form-group"><label>Usia Min (hari)</label><input type="number" id="fNilaiUsiaMin" value="${isEdit?data.usia_hari_min:0}"></div>
+        <div class="form-group"><label>Usia Max (hari)</label><input type="number" id="fNilaiUsiaMax" value="${isEdit?data.usia_hari_max:99999}"></div></div>
+        <div class="form-group"><label>Keterangan</label><input type="text" id="fNilaiKet" value="${isEdit?data.keterangan||'':''}"></div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+            <button class="btn btn-primary" onclick="simpanNilaiNormal(${isEdit?data.id_nilai_normal:'null'})">Simpan</button>
+        </div>`;
+    document.getElementById("modalOverlay").classList.add("open");
+    toggleNilaiFields();
+}
+
+function toggleNilaiFields() {
+    const t=document.getElementById("fNilaiTipe").value;
+    document.getElementById("nilaiRangeFields").style.display=t==='range'?'block':'none';
+    document.getElementById("nilaiOperatorFields").style.display=t==='operator'?'block':'none';
+    document.getElementById("nilaiTextField").style.display=t==='text'?'block':'none';
+}
+
+async function simpanNilaiNormal(id) {
+    const body={id_pemeriksaan:parseInt(document.getElementById("fNilaiPemeriksaan").value),jenis_kelamin:document.getElementById("fNilaiJk").value||null,usia_hari_min:parseInt(document.getElementById("fNilaiUsiaMin").value)||0,usia_hari_max:parseInt(document.getElementById("fNilaiUsiaMax").value)||99999,jenis_nilai:document.getElementById("fNilaiTipe").value,nilai_bawah:parseFloat(document.getElementById("fNilaiBawah").value)||null,nilai_atas:parseFloat(document.getElementById("fNilaiAtas").value)||null,operator:document.getElementById("fNilaiOperator").value||null,nilai_operator:parseFloat(document.getElementById("fNilaiOperatorVal").value)||null,nilai_text:document.getElementById("fNilaiText").value||null,keterangan:document.getElementById("fNilaiKet").value||null};
+    try {
+        if (id) { await api(`${BASE}/nilai-normal/${id}`,{method:"PUT",body:JSON.stringify(body)}); }
+        else { await api(`${BASE}/nilai-normal/`,{method:"POST",body:JSON.stringify(body)}); }
+        closeModal(); loadNilaiNormal();
+    } catch(e) { alert("Error: "+e.message); }
+}
+
+async function hapusNilaiNormal(id) { if(!confirm("Hapus?"))return; try{await api(`${BASE}/nilai-normal/${id}`,{method:"DELETE"});loadNilaiNormal();}catch(e){alert(e.message);} }
+
+// ── KUNJUNGAN ───────────────────────────────────────
+async function loadPasienDropdown() {
+    try {
+        const r=await api(`${BASE}/pasien/search?nama=`); const data=await r.json();
+        const sel=document.getElementById("searchPasien");
+        sel.innerHTML='<option value="">-- Cari & Pilih Pasien --</option>'+data.map(p=>`<option value="${p.id}" data-nama="${p.nama}">${p.nama} (RM: ${p.no_rm})</option>`).join("");
+    } catch(e) {}
+}
+
+function onPasienSelected() {
+    const sel=document.getElementById("searchPasien"); const opt=sel.options[sel.selectedIndex];
+    if (opt.value) { document.getElementById("idpasien").value=opt.value; document.getElementById("formPasienBaru").style.display="none"; }
+}
+
+function showFormPasienBaru() {
+    document.getElementById("formPasienBaru").style.display="block";
+    document.getElementById("idpasien").value=""; document.getElementById("searchPasien").value="";
+    ["namaBaru","tglLahirBaru","alamatBaru","noHpBaru"].forEach(id=>document.getElementById(id).value="");
+    document.getElementById("jkBaru").value="";
+}
+
+async function simpanKunjungan() {
+    const idp=document.getElementById("idpasien").value;
+    const tgl=document.getElementById("tglKunjungan").value;
+    const body={idpasien:idp?parseInt(idp):null,keluhan:document.getElementById("keluhanKunjungan").value,tgl_kunjungan:tgl};
+    if (!idp) {
+        body.nama=document.getElementById("namaBaru").value; body.tgl_lahir=document.getElementById("tglLahirBaru").value;
+        body.alamat=document.getElementById("alamatBaru").value; body.jenis_kelamin=document.getElementById("jkBaru").value;
+        body.no_hp=document.getElementById("noHpBaru").value;
+    }
+    try {
+        const r=await api(`${BASE}/kunjungan/`,{method:"POST",body:JSON.stringify(body)});
+        const d=await r.json();
+        if (!r.ok) throw d;
+        document.getElementById("resultKunjungan").innerHTML=`<div class="result" style="background:#e6f4ea;padding:10px;border-radius:6px;">✅ No RM: ${d.no_rm}, No Reg: ${d.no_reg}</div>`;
+        loadKunjunganList();
+    } catch(e) { document.getElementById("resultKunjungan").innerHTML=`<div style="background:#fce8e6;padding:10px;border-radius:6px;color:#d93025;">❌ ${JSON.stringify(e)}</div>`; }
+}
+
+let pageKunjungan=1;
+async function loadKunjunganList() {
+    const a=document.getElementById("filterTglAwal").value, b=document.getElementById("filterTglAkhir").value;
+    if (!a||!b) return;
+    document.getElementById("tblKunjungan").innerHTML='<tr><td colspan="6" class="text-muted">Memuat...</td></tr>';
+    try {
+        const r=await api(`${BASE}/kunjungan/?tgl_awal=${a}&tgl_akhir=${b}&page=${pageKunjungan}&limit=10`);
+        const d=await r.json();
+        if (!d.data||!d.data.length) { document.getElementById("tblKunjungan").innerHTML='<tr><td colspan="6" class="text-muted">Tidak ada data</td></tr>'; document.getElementById("paginationKunjungan").innerHTML=""; return; }
+        document.getElementById("tblKunjungan").innerHTML=d.data.map(r=>`
+            <tr><td>${r.tgl_kunjungan}</td><td>${r.no_reg}</td><td>${r.nama_pasien}</td><td>${r.keluhan||'-'}</td>
+            <td><span class="badge badge-${r.status==='ORDER'?'order':r.status==='PROSES'?'proses':'selesai'}">${r.status}</span></td>
+            <td><button class="btn btn-info btn-sm" onclick="lihatPemeriksaanPasien(${r.id_kunjungan})">🔍 Detail</button></td></tr>
+        `).join("");
+        // pagination
+        const pg=document.getElementById("paginationKunjungan");
+        if (d.total_pages<=1) { pg.innerHTML=""; return; }
+        let html=''; for(let i=1;i<=d.total_pages;i++) html+=`<button class="${i===d.page?'btn btn-primary btn-sm':'btn btn-outline btn-sm'}" onclick="pageKunjungan=${i};loadKunjunganList()">${i}</button>`;
+        pg.innerHTML=html;
+    } catch(e) { document.getElementById("tblKunjungan").innerHTML=`<tr><td colspan="6" style="color:red;">${e.message}</td></tr>`; }
+}
+
+function lihatPemeriksaanPasien(idKunjungan) {
+    showSection("pemeriksaan-pasien");
+    loadKunjunganDropdown("filterKunjunganPP", function() {
+        document.getElementById("filterKunjunganPP").value=idKunjungan;
+        loadPemeriksaanPasien();
+    });
+}
+
+// ── KUNJUNGAN DROPDOWN HELPER ───────────────────────
+async function loadKunjunganDropdown(selectId, cb) {
+    try {
+        const today=new Date(); const off=today.getTimezoneOffset()*60000;
+        const end=new Date(today-off).toISOString().slice(0,10);
+        const start=new Date(today-off-7*86400000).toISOString().slice(0,10);
+        const r=await api(`${BASE}/kunjungan/?tgl_awal=${start}&tgl_akhir=${end}&page=1&limit=100`);
+        const d=await r.json();
+        const sel=document.getElementById(selectId); if (!sel) return;
+        sel.innerHTML='<option value="">-- Pilih Kunjungan --</option>'+(d.data||[]).map(k=>`<option value="${k.id_kunjungan}">${k.tgl_kunjungan} - ${k.no_reg} - ${k.nama_pasien}</option>`).join("");
+        if (cb) cb();
+    } catch(e) { const sel=document.getElementById(selectId); if(sel) sel.innerHTML='<option value="">Gagal load kunjungan</option>'; }
+}
+
+// ── PEMERIKSAAN PASIEN ──────────────────────────────
+async function loadPemeriksaanPasien() {
+    const idKunjungan=document.getElementById("filterKunjunganPP").value;
+    const tbody=document.getElementById("tblPemeriksaanPasien");
+    if (!idKunjungan) { tbody.innerHTML='<tr><td colspan="8" class="text-muted">Pilih kunjungan</td></tr>'; return; }
+    try {
+        const r=await api(`${BASE}/kunjungan/${idKunjungan}/pemeriksaan`); const data=await r.json();
+        if (!data.length) { tbody.innerHTML='<tr><td colspan="8" class="text-muted">Belum ada pemeriksaan</td></tr>'; return; }
+        tbody.innerHTML=data.map((pp,i)=>`
+            <tr><td>${i+1}</td><td><span class="badge ${pp.jenis==='SATUAN'?'badge-order':'badge-proses'}">${pp.jenis}</span></td>
+            <td>${pp.id_pemeriksaan||'Paket#'+pp.id_paket}</td><td>Rp ${(pp.biaya_dibebankan||0).toLocaleString()}</td>
+            <td>${pp.jam_mulai?pp.jam_mulai.slice(11,19):'-'}</td><td>${pp.jam_selesai?pp.jam_selesai.slice(11,19):'-'}</td>
+            <td><span class="badge badge-${pp.status==='ORDER'?'order':pp.status==='PROSES'?'proses':'selesai'}">${pp.status}</span></td>
+            <td class="inline-flex">
+                ${pp.status==='ORDER'?`<button class="btn btn-success btn-sm" onclick="mulaiPemeriksaan(${pp.id})">▶ Mulai</button>`:''}
+                ${pp.status==='PROSES'?`<button class="btn btn-warning btn-sm" onclick="selesaiPemeriksaan(${pp.id})">⏹ Selesai</button>`:''}
+                <button class="btn btn-info btn-sm" onclick="lihatHasil(${pp.id})">📋 Hasil</button>
+            </td></tr>
+        `).join("");
+    } catch(e) { tbody.innerHTML=`<tr><td colspan="8" style="color:red;">${e.message}</td></tr>`; }
+}
+
+function refreshPP() { loadPemeriksaanPasien(); }
+
+async function mulaiPemeriksaan(id) {
+    try{await api(`${BASE}/pemeriksaan-pasien/${id}/mulai`,{method:"PUT"});loadPemeriksaanPasien();}catch(e){alert(e.message);}
+}
+
+async function selesaiPemeriksaan(id) {
+    try{await api(`${BASE}/pemeriksaan-pasien/${id}/selesai`,{method:"PUT"});loadPemeriksaanPasien();}catch(e){alert(e.message);}
+}
+
+function openModalAddPemeriksaan() {
+    const idKunjungan=document.getElementById("filterKunjunganPP").value;
+    if (!idKunjungan) { alert("Pilih kunjungan dulu"); return; }
+    const label=document.getElementById("filterKunjunganPP").options[document.getElementById("filterKunjunganPP").selectedIndex].text;
+    loadPemeriksaanOptions().then(px=>loadPaketOptions().then(pk=>{
+        document.getElementById("modalContent").innerHTML=`
+            <h3>Tambah Pemeriksaan</h3>
+            <p class="text-muted mb-12">Kunjungan: ${label}</p>
+            <div id="ppItems"><div class="pp-item" style="display:flex;gap:8px;margin-bottom:8px;">
+                <select class="ppJenis" style="flex:0 0 120px;" onchange="togglePPJenis(this)">
+                    <option value="SATUAN">SATUAN</option><option value="PAKET">PAKET</option>
+                </select>
+                <select class="ppIdItem" style="flex:1;">${px.map(p=>`<option value="px-${p.id_pemeriksaan}">${p.nama_pemeriksaan}</option>`).join("")}</select>
+            </div></div>
+            <button class="btn btn-outline btn-sm" onclick="addPPRow()">+ Tambah Item</button>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+                <button class="btn btn-primary" onclick="simpanPP(${idKunjungan})">Simpan</button>
+            </div>`;
+        document.getElementById("modalOverlay").classList.add("open");
+    }));
+}
+
+function addPPRow() {
+    loadPemeriksaanOptions().then(px=>{
+        const div=document.getElementById("ppItems");
+        const item=document.createElement("div"); item.className="pp-item"; item.style="display:flex;gap:8px;margin-bottom:8px;";
+        item.innerHTML=`
+            <select class="ppJenis" style="flex:0 0 120px;" onchange="togglePPJenis(this)">
+                <option value="SATUAN">SATUAN</option><option value="PAKET">PAKET</option>
+            </select>
+            <select class="ppIdItem" style="flex:1;">${px.map(p=>`<option value="px-${p.id_pemeriksaan}">${p.nama_pemeriksaan}</option>`).join("")}</select>
+            <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+        div.appendChild(item);
+    });
+}
+
+function togglePPJenis(sel) {
+    const container=sel.closest(".pp-item");
+    const idSel=container.querySelector(".ppIdItem");
+    if (sel.value==="SATUAN") { loadPemeriksaanOptions().then(px=>{idSel.innerHTML=px.map(p=>`<option value="px-${p.id_pemeriksaan}">${p.nama_pemeriksaan}</option>`).join("");}); }
+    else { loadPaketOptions().then(pk=>{idSel.innerHTML=pk.map(p=>`<option value="pk-${p.id_paket}">${p.nama_paket}</option>`).join("");}); }
+}
+
+async function loadPaketOptions() {
+    try{const r=await api(`${BASE}/paket-pemeriksaan/`);return await r.json();}catch(e){return[];}
+}
+
+async function simpanPP(idKunjungan) {
+    const items=[]; document.querySelectorAll(".pp-item").forEach(el=>{
+        const jenis=el.querySelector(".ppJenis").value;
+        const val=el.querySelector(".ppIdItem").value;
+        if (jenis==="SATUAN") items.push({jenis:"SATUAN",id_pemeriksaan:parseInt(val.replace("px-",""))});
+        else items.push({jenis:"PAKET",id_paket:parseInt(val.replace("pk-",""))});
+    });
+    if (!items.length) { alert("Pilih minimal 1 item"); return; }
+    try {
+        await api(`${BASE}/kunjungan/${idKunjungan}/pemeriksaan`,{method:"POST",body:JSON.stringify({items})});
+        closeModal(); loadPemeriksaanPasien();
+    } catch(e) { alert("Error: "+(e.detail||e.message)); }
+}
+
+// ── HASIL PEMERIKSAAN ───────────────────────────────
+async function loadHasilList() {
+    const idKunjungan=document.getElementById("filterKunjunganHasil").value;
+    const tbody=document.getElementById("tblHasil");
+    if (!idKunjungan) { tbody.innerHTML='<tr><td colspan="7" class="text-muted">Pilih kunjungan</td></tr>'; return; }
+    try {
+        const r=await api(`${BASE}/kunjungan/${idKunjungan}/pemeriksaan`); const ppList=await r.json();
+        let html='';
+        for (const pp of ppList) {
+            const hr=await api(`${BASE}/hasil-pemeriksaan/${pp.id}`); const hasilList=await hr.json();
+            for (const h of hasilList) {
+                const st=h.status_nilai==='N'?'<span class="badge badge-normal">✅ N</span>':h.status_nilai==='L'?'<span class="badge badge-low">⬇ L</span>':h.status_nilai==='H'?'<span class="badge badge-high">⬆ H</span>':'<span class="text-muted">-</span>';
+                html+=`<tr><td>Periksa #${h.id_pemeriksaan}</td>
+                    <td><input type="number" step="any" class="form-input-sm" id="hb_${h.id}" value="${h.nilai_bawah??''}" style="width:90px;" onchange="simpanHasil(${h.id})" placeholder="-"></td>
+                    <td><input type="number" step="any" class="form-input-sm" id="ha_${h.id}" value="${h.nilai_atas??''}" style="width:90px;" onchange="simpanHasil(${h.id})" placeholder="-"></td>
+                    <td><input type="number" step="any" class="form-input-sm" id="hv_${h.id}" value="${h.nilai_value??''}" style="width:90px;" onchange="simpanHasil(${h.id})" placeholder="-"></td>
+                    <td><input type="text" class="form-input-sm" id="ht_${h.id}" value="${h.nilai_text||''}" style="width:100px;" onchange="simpanHasil(${h.id})" placeholder="-"></td>
+                    <td id="hs_${h.id}">${st}</td>
+                    <td><button class="btn btn-primary btn-sm" onclick="simpanHasil(${h.id})">💾</button></td></tr>`;
+            }
+        }
+        tbody.innerHTML=html||'<tr><td colspan="7" class="text-muted">Belum ada hasil</td></tr>';
+    } catch(e) { tbody.innerHTML=`<tr><td colspan="7" style="color:red;">${e.message}</td></tr>`; }
+}
+
+async function simpanHasil(id) {
+    const body={};
+    const b=document.getElementById("hb_"+id); if(b&&b.value) body.nilai_bawah=parseFloat(b.value);
+    const a=document.getElementById("ha_"+id); if(a&&a.value) body.nilai_atas=parseFloat(a.value);
+    const v=document.getElementById("hv_"+id); if(v&&v.value) body.nilai_value=parseFloat(v.value);
+    const t=document.getElementById("ht_"+id); if(t&&t.value) body.nilai_text=t.value;
+    try {
+        const r=await api(`${BASE}/hasil-pemeriksaan/${id}`,{method:"PUT",body:JSON.stringify(body)});
+        const d=await r.json();
+        const st=d.status_nilai;
+        const el=document.getElementById("hs_"+id);
+        if (el) el.innerHTML=st==='N'?'<span class="badge badge-normal">✅ N</span>':st==='L'?'<span class="badge badge-low">⬇ L</span>':st==='H'?'<span class="badge badge-high">⬆ H</span>':'<span class="text-muted">-</span>';
+    } catch(e) { console.error("Gagal simpan hasil",e); }
+}
+
+function lihatHasil(idPP) {
+    const idKunjungan=document.getElementById("filterKunjunganPP").value;
+    document.getElementById("filterKunjunganHasil").value=idKunjungan;
+    showSection("hasil");
+    loadHasilList();
+}
+
+// ── TAGIHAN ─────────────────────────────────────────
+async function loadTagihan() {
+    const idKunjungan=document.getElementById("filterKunjunganTagihan").value;
+    if (!idKunjungan) { document.getElementById("tagihanDetail").style.display="none"; return; }
+    try {
+        const label=document.getElementById("filterKunjunganTagihan").options[document.getElementById("filterKunjunganTagihan").selectedIndex].text;
+        const r=await api(`${BASE}/kunjungan/${idKunjungan}/tagihan`);
+        if (r.status===404) { document.getElementById("tagihanDetail").style.display="none"; return; }
+        const d=await r.json();
+        document.getElementById("tagihanDetail").style.display="block";
+        document.getElementById("tagihanTitle").textContent=`Tagihan - ${label}`;
+        document.getElementById("tagihanTotal").textContent=(d.total_biaya||0).toLocaleString();
+        document.getElementById("tagihanStatus").innerHTML=d.status_tagihan==='LUNAS'?'<span class="badge badge-lunas">LUNAS</span>':'<span class="badge badge-belum">BELUM</span>';
+        document.getElementById("btnBayar").style.display=d.status_tagihan==='LUNAS'?'none':'inline-flex';
+        document.getElementById("tblTagihanDetail").innerHTML=(d.details||[]).map(dt=>`
+            <tr><td>#${dt.id_pemeriksaan_pasien}</td><td>Rp ${(dt.biaya||0).toLocaleString()}</td></tr>
+        `).join("")||'<tr><td colspan="2" class="text-muted">Tidak ada detail</td></tr>';
+    } catch(e) { document.getElementById("tagihanDetail").style.display="none"; }
+}
+
+async function generateTagihan() {
+    const idKunjungan=document.getElementById("filterKunjunganTagihan").value;
+    if (!idKunjungan) { alert("Pilih kunjungan dulu"); return; }
+    try {
+        await api(`${BASE}/kunjungan/${idKunjungan}/tagihan`,{method:"POST"});
+        loadTagihan(); alert("Tagihan berhasil dibuat!");
+    } catch(e) { alert("Error: "+(e.detail||e.message)); }
+}
+
+async function bayarTagihan() {
+    const idKunjungan=document.getElementById("filterKunjunganTagihan").value;
+    if (!idKunjungan) return;
+    try {
+        const r=await api(`${BASE}/kunjungan/${idKunjungan}/tagihan`);
+        const d=await r.json();
+        await api(`${BASE}/tagihan/${d.id}/bayar`,{method:"PUT"});
+        loadTagihan(); alert("Tagihan lunas!");
+    } catch(e) { alert("Error: "+(e.detail||e.message)); }
+}
+
+function refreshTagihan() { loadTagihan(); }
+
+// ── HELPERS ─────────────────────────────────────────
+function editPemeriksaan(d) { openModalPemeriksaan(d); }
+function editPaket(d) { openModalPaket(d); }
+function editNilaiNormal(d) { openModalNilaiNormal(d); }
+
+// ── ON LOAD ─────────────────────────────────────────
+window.onload=function() {
+    if (getToken()) initApp();
+    else { document.getElementById("loginPage").style.display="flex"; showLogin(); }
+};
+</script>
+</body>
+</html>

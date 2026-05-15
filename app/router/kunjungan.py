@@ -7,7 +7,7 @@ from app.models.user import User
 from app.services.kunjungan_service import KunjunganService
 from app.schemas.kunjungan import KunjunganCreate
 
-router = APIRouter(prefix="/kunjungan")
+router = APIRouter(prefix="/kunjungan", tags=["Kunjungan"])
 
 
 @router.post("/")
