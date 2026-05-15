@@ -60,7 +60,7 @@ class KunjunganService:
             return {
                 "idpasien": pasien.id,
                 "no_rm": no_rm,
-                "no_reg": no_reg,
+
             }
 
     def get_all_kunjungan(self, tgl_awal: date, tgl_akhir: date, page: int = 1, limit: int = 10):
@@ -88,3 +88,4 @@ class KunjunganService:
             "limit": limit,
             "total_pages": total_pages,
         }
+        

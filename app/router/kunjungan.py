@@ -10,6 +10,7 @@ from app.schemas.kunjungan import KunjunganCreate
 router = APIRouter(prefix="/kunjungan", tags=["Kunjungan"])
 
 
+
 @router.post("/")
 def create_kunjungan(
     data: KunjunganCreate,
@@ -18,6 +19,7 @@ def create_kunjungan(
 ):
     service = KunjunganService(db)
     return service.create_kunjungan(data, current_user)
+    return service.create_kunjungan(data)
 
 
 @router.get("/")

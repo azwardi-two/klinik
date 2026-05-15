@@ -20,3 +20,5 @@ def search_pasien(
         .order_by(Pasien.nama.asc())
         .all()
     )
+def search_pasien(nama: str,db: Session = Depends(get_db)):
+    return db.query(Pasien).filter(Pasien.nama.ilike(f"%{nama}%")).order_by(Pasien.nama.asc()).all()

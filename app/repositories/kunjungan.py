@@ -25,7 +25,10 @@ class KunjunganRepository:
 
         rows = (
             self.db.query(
+<<<<<<< HEAD
                 Kunjungan.id_kunjungan,
+=======
+>>>>>>> front-end
                 Kunjungan.tgl_kunjungan,
                 Kunjungan.no_reg_kunjungan,
                 Pasien.nama,
@@ -40,4 +43,8 @@ class KunjunganRepository:
             .all()
         )
 
+<<<<<<< HEAD
         return total, rows
+=======
+        return total, rows
+>>>>>>> front-end

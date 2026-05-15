@@ -56,6 +56,7 @@
             color: red;
         }
 
+<<<<<<< HEAD
         .login-box {
             max-width: 360px;
             margin: 60px auto 0;
@@ -103,6 +104,10 @@
         }
         .user-bar .btn-logout:hover {
             background: #c82333;
+=======
+        .container {
+            max-width: 900px;
+>>>>>>> front-end
         }
 
         .filter-bar {
@@ -291,6 +296,36 @@
         <div class="pagination" id="paginationKunjungan"></div>
 
     </div>
+
+    <hr>
+
+    <h3>Daftar Kunjungan</h3>
+
+    <div class="filter-bar">
+        <input type="date" id="filterTglAwal">
+        <span>s/d</span>
+        <input type="date" id="filterTglAkhir">
+        <button class="btn-refresh" onclick="loadKunjunganList()">⟳ Refresh</button>
+    </div>
+
+    <div style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Tanggal</th>
+                    <th>No. Reg</th>
+                    <th>Nama Pasien</th>
+                    <th>Keluhan</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyKunjungan">
+                <tr><td colspan="5">Memuat data...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pagination" id="paginationKunjungan"></div>
 
 </div>
 
@@ -551,6 +586,90 @@ function setTanggalFilter() {
     document.getElementById("filterTglAwal").value = local;
     document.getElementById("filterTglAkhir").value = local;
 }
+<<<<<<< HEAD
+=======
+
+let kunjunganPage = 1;
+
+async function loadKunjunganList() {
+    const tglAwal = document.getElementById("filterTglAwal").value;
+    const tglAkhir = document.getElementById("filterTglAkhir").value;
+    if (!tglAwal || !tglAkhir) return;
+
+    document.getElementById("tbodyKunjungan").innerHTML =
+        '<tr><td colspan="5">Memuat data...</td></tr>';
+
+    try {
+        const url = `http://127.0.0.1:8000/kunjungan/?tgl_awal=${tglAwal}&tgl_akhir=${tglAkhir}&page=${kunjunganPage}&limit=10`;
+        const res = await fetch(url);
+        const result = await res.json();
+
+        if (!res.ok) throw result;
+
+        renderKunjunganTable(result);
+        renderPagination(result);
+    } catch (err) {
+        document.getElementById("tbodyKunjungan").innerHTML =
+            `<tr><td colspan="5" style="color:red;">Gagal memuat data: ${JSON.stringify(err)}</td></tr>`;
+        document.getElementById("paginationKunjungan").innerHTML = "";
+    }
+}
+
+function renderKunjunganTable(result) {
+    const tbody = document.getElementById("tbodyKunjungan");
+    if (result.data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5">Tidak ada data.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = result.data.map(r =>
+        `<tr>
+            <td>${r.tgl_kunjungan}</td>
+            <td>${r.no_reg}</td>
+            <td>${r.nama_pasien}</td>
+            <td>${r.keluhan}</td>
+            <td>${r.status}</td>
+        </tr>`
+    ).join("");
+}
+
+function renderPagination(result) {
+    const div = document.getElementById("paginationKunjungan");
+    const { page, total_pages } = result;
+    if (total_pages <= 1) {
+        div.innerHTML = "";
+        return;
+    }
+
+    let html = `<button ${page <= 1 ? 'disabled' : ''} onclick="goToPage(${page - 1})">«</button>`;
+
+    const maxShow = 5;
+    let start = Math.max(1, page - Math.floor(maxShow / 2));
+    let end = Math.min(total_pages, start + maxShow - 1);
+    if (end - start + 1 < maxShow) {
+        start = Math.max(1, end - maxShow + 1);
+    }
+
+    for (let i = start; i <= end; i++) {
+        html += `<button class="${i === page ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+    }
+
+    html += `<button ${page >= total_pages ? 'disabled' : ''} onclick="goToPage(${page + 1})">»</button>`;
+
+    div.innerHTML = html;
+}
+
+function goToPage(p) {
+    kunjunganPage = p;
+    loadKunjunganList();
+}
+
+window.onload = function () {
+    setTanggalSekarang();
+    setTanggalFilter();
+    loadPasienDropdown();
+    loadKunjunganList();
+};
+>>>>>>> front-end
 
 // ── LIST KUNJUNGAN ─────────────────────────────────────
 let kunjunganPage = 1;
