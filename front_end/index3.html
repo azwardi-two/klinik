@@ -105,6 +105,24 @@
         .arrow-down { color: #d93025; }
         .check-ok { color: #188038; }
 
+        .master-detail-layout { display: flex; gap: 0; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background: #fff; min-height: 500px; }
+        .master-panel { width: 35%; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; background: #fafafa; }
+        .master-panel .panel-header { padding: 12px; border-bottom: 1px solid #e0e0e0; background: #fff; }
+        .master-panel .panel-header input { width: 100%; }
+        .master-panel .master-actions { padding: 8px 12px; border-bottom: 1px solid #e0e0e0; display: flex; gap: 6px; align-items: center; background: #fff; }
+        .master-list { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
+        .master-list-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .master-list-item:hover { background: #e8f0fe; }
+        .master-list-item.active { background: #1a73e8; color: #fff; }
+        .master-list-item .nama { font-weight: 500; font-size: 14px; }
+        .master-list-item .sub { font-size: 12px; color: #888; }
+        .master-list-item.active .sub { color: #cce0ff; }
+        .detail-panel { flex: 1; display: flex; flex-direction: column; }
+        .detail-panel .panel-header { padding: 12px 16px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .detail-panel .panel-header h3 { font-size: 15px; margin: 0; }
+        .detail-panel .detail-content { flex: 1; padding: 16px; overflow-y: auto; }
+        .empty-state { text-align: center; color: #999; padding: 60px 20px; font-size: 14px; }
+
         @media (max-width: 768px) {
             .sidebar { width: 56px; }
             .sidebar h3, .sidebar .user-info span { display: none; }
@@ -188,17 +206,36 @@
     </div>
 </div>
 
-<!-- ===== NILAI NORMAL ===== -->
+<!-- ===== NILAI NORMAL (MASTER/DETAIL) ===== -->
 <div class="section" id="sec-nilai-normal">
-    <div class="card">
-        <div class="toolbar">
-            <select id="filterNilaiPemeriksaan" onchange="loadNilaiNormal()"><option value="">-- Pilih Pemeriksaan --</option></select>
-            <div class="spacer"></div>
-            <button class="btn btn-primary" onclick="openModalNilaiNormal()">+ Tambah</button>
+    <div class="master-detail-layout">
+        <div class="master-panel">
+            <div class="panel-header">
+                <input type="text" id="filterMasterPemeriksaan" placeholder="Cari pemeriksaan..." oninput="loadMasterPemeriksaan()">
+            </div>
+            <div class="master-actions">
+                <button class="btn btn-primary btn-sm" onclick="openModalPemeriksaan()">+ Tambah Pemeriksaan</button>
+            </div>
+            <ul class="master-list" id="masterPemeriksaanList">
+                <li class="empty-state" style="padding:20px;text-align:center;color:#999;">Memuat...</li>
+            </ul>
         </div>
-        <div style="overflow-x:auto;"><table><thead><tr>
-            <th>Pemeriksaan</th><th>JK</th><th>Usia (hari)</th><th>Tipe</th><th>Nilai Bawah</th><th>Nilai Atas</th><th>Operator</th><th>Nilai</th><th>Text</th><th>Aksi</th>
-        </tr></thead><tbody id="tblNilaiNormal"><tr><td colspan="10" class="text-muted">Memuat...</td></tr></tbody></table></div>
+        <div class="detail-panel">
+            <div class="panel-header">
+                <h3 id="detailPemeriksaanTitle">Pilih Pemeriksaan</h3>
+                <div>
+                    <button class="btn btn-primary btn-sm" id="btnTambahNilaiNormal" onclick="openModalNilaiNormalForCurrent()" style="display:none;">+ Tambah Nilai Normal</button>
+                </div>
+            </div>
+            <div class="detail-content" id="detailNilaiNormalContent">
+                <div class="empty-state" id="emptyDetailState">Pilih pemeriksaan di panel kiri</div>
+                <div id="nilaiNormalTableWrapper" style="display:none;">
+                    <div style="overflow-x:auto;"><table><thead><tr>
+                        <th>JK</th><th>Usia (hari)</th><th>Tipe</th><th>Nilai Bawah</th><th>Nilai Atas</th><th>Operator</th><th>Nilai</th><th>Text</th><th>Aksi</th>
+                    </tr></thead><tbody id="tblNilaiNormalDetail"></tbody></table></div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -387,7 +424,7 @@ function showSection(id) {
     document.getElementById("pageTitle").textContent=titles[id]||id;
     if (id==="pemeriksaan") loadPemeriksaan();
     else if (id==="paket") loadPaket();
-    else if (id==="nilai-normal") { loadPemeriksaanDropdown("filterNilaiPemeriksaan"); loadNilaiNormal(); }
+    else if (id==="nilai-normal") { selectedPemeriksaanId=null; loadMasterPemeriksaan(); resetDetailPanel(); }
     else if (id==="kunjungan") { loadPasienDropdown(); loadKunjunganList(); }
     else if (id==="pemeriksaan-pasien") { loadKunjunganDropdown("filterKunjunganPP", function(){ if(document.getElementById("filterKunjunganPP").value) loadPemeriksaanPasien(); }); }
     else if (id==="hasil") { loadKunjunganDropdown("filterKunjunganHasil", function(){ if(document.getElementById("filterKunjunganHasil").value) loadHasilList(); }); }
@@ -513,77 +550,159 @@ async function simpanPaket(id) {
 
 async function hapusPaket(id) { if(!confirm("Hapus paket?"))return; try{await api(`${BASE}/paket-pemeriksaan/${id}`,{method:"DELETE"});loadPaket();}catch(e){alert(e.message);} }
 
-// ── NILAI NORMAL ────────────────────────────────────
-async function loadNilaiNormal() {
-    const idP=document.getElementById("filterNilaiPemeriksaan").value;
-    try {
-        const url=idP?`${BASE}/nilai-normal/pemeriksaan/${idP}`:`${BASE}/nilai-normal/`;
-        const r=await api(url); const data=await r.json();
-        const px=await loadPemeriksaanOptions(); const map={}; px.forEach(p=>map[p.id_pemeriksaan]=p.nama_pemeriksaan);
-        document.getElementById("tblNilaiNormal").innerHTML=data.map(n=>`
-            <tr><td>${map[n.id_pemeriksaan]||n.id_pemeriksaan}</td><td>${n.jenis_kelamin||'-'}</td>
-            <td>${n.usia_hari_min}-${n.usia_hari_max}</td><td>${n.jenis_nilai}</td>
-            <td>${n.nilai_bawah??'-'}</td><td>${n.nilai_atas??'-'}</td><td>${n.operator||'-'}</td>
-            <td>${n.nilai_operator??'-'}</td><td>${n.nilai_text||'-'}</td>
-            <td class="inline-flex">
-                <button class="btn btn-warning btn-sm" onclick='editNilaiNormal(${JSON.stringify(n).replace(/'/g,"&#39;")})'>✏</button>
-                <button class="btn btn-danger btn-sm" onclick="hapusNilaiNormal(${n.id_nilai_normal})">🗑</button>
-            </td></tr>
-        `).join("");
-    } catch(e) { document.getElementById("tblNilaiNormal").innerHTML=`<tr><td colspan="10" style="color:red;">${e.message}</td></tr>`; }
+// ── NILAI NORMAL (MASTER/DETAIL) ────────────────────
+let selectedPemeriksaanId = null;
+
+function resetDetailPanel() {
+    selectedPemeriksaanId = null;
+    document.getElementById("detailPemeriksaanTitle").textContent = "Pilih Pemeriksaan";
+    document.getElementById("btnTambahNilaiNormal").style.display = "none";
+    document.getElementById("emptyDetailState").style.display = "block";
+    document.getElementById("nilaiNormalTableWrapper").style.display = "none";
+    document.getElementById("tblNilaiNormalDetail").innerHTML = "";
 }
 
-function openModalNilaiNormal(data) {
-    const isEdit=!!data;
+async function loadMasterPemeriksaan() {
+    try {
+        const r = await api(`${BASE}/pemeriksaan/`);
+        const data = await r.json();
+        const q = (document.getElementById("filterMasterPemeriksaan").value || "").toLowerCase();
+        const filtered = q ? data.filter(p => p.nama_pemeriksaan.toLowerCase().includes(q)) : data;
+        const list = document.getElementById("masterPemeriksaanList");
+        list.innerHTML = filtered.map(p => `
+            <li class="master-list-item ${selectedPemeriksaanId === p.id_pemeriksaan ? 'active' : ''}"
+                data-id="${p.id_pemeriksaan}"
+                onclick="selectPemeriksaan(${p.id_pemeriksaan}, '${p.nama_pemeriksaan.replace(/'/g, "\\'")}')">
+                <div>
+                    <div class="nama">${p.nama_pemeriksaan}</div>
+                    <div class="sub">${p.kategori || 'Umum'}</div>
+                </div>
+                <span style="font-size:11px;opacity:0.6;">${p.biaya ? 'Rp' + Number(p.biaya).toLocaleString() : ''}</span>
+            </li>
+        `).join("");
+        if (!filtered.length) {
+            list.innerHTML = '<li class="empty-state" style="padding:20px;text-align:center;color:#999;">Tidak ada data</li>';
+        }
+        if (selectedPemeriksaanId) {
+            const activeEl = document.querySelector(`.master-list-item[data-id="${selectedPemeriksaanId}"]`);
+            if (!activeEl) { resetDetailPanel(); }
+        }
+    } catch(e) {
+        document.getElementById("masterPemeriksaanList").innerHTML =
+            `<li class="empty-state" style="padding:20px;text-align:center;color:red;">${e.message}</li>`;
+    }
+}
+
+function selectPemeriksaan(id_pemeriksaan, nama_pemeriksaan) {
+    selectedPemeriksaanId = id_pemeriksaan;
+    document.getElementById("detailPemeriksaanTitle").textContent = nama_pemeriksaan;
+    document.getElementById("btnTambahNilaiNormal").style.display = "";
+    document.getElementById("emptyDetailState").style.display = "none";
+    document.getElementById("nilaiNormalTableWrapper").style.display = "block";
+    document.querySelectorAll(".master-list-item").forEach(el => el.classList.remove("active"));
+    const activeEl = document.querySelector(`.master-list-item[data-id="${id_pemeriksaan}"]`);
+    if (activeEl) activeEl.classList.add("active");
+    loadNilaiNormalDetail(id_pemeriksaan);
+}
+
+async function loadNilaiNormalDetail(id_pemeriksaan) {
+    const tbody = document.getElementById("tblNilaiNormalDetail");
+    tbody.innerHTML = '<tr><td colspan="9" class="text-muted">Memuat...</td></tr>';
+    try {
+        const r = await api(`${BASE}/nilai-normal/pemeriksaan/${id_pemeriksaan}`);
+        const data = await r.json();
+        tbody.innerHTML = data.map(n => {
+            const safe = JSON.stringify(n).replace(/'/g, "&#39;");
+            return `<tr>
+                <td>${n.jenis_kelamin || '-'}</td>
+                <td>${n.usia_hari_min}-${n.usia_hari_max}</td>
+                <td>${n.jenis_nilai}</td>
+                <td>${n.nilai_bawah ?? '-'}</td>
+                <td>${n.nilai_atas ?? '-'}</td>
+                <td>${n.operator || '-'}</td>
+                <td>${n.nilai_operator ?? '-'}</td>
+                <td>${n.nilai_text || '-'}</td>
+                <td class="inline-flex">
+                    <button class="btn btn-warning btn-sm" onclick='editNilaiNormal(${safe})'>✏</button>
+                    <button class="btn btn-info btn-sm" onclick='copyNilaiNormal(${safe})'>📋</button>
+                    <button class="btn btn-danger btn-sm" onclick="hapusNilaiNormal(${n.id_nilai_normal})">🗑</button>
+                </td>
+            </tr>`;
+        }).join("");
+        if (!data.length) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-muted text-center">Belum ada nilai normal untuk pemeriksaan ini</td></tr>';
+        }
+    } catch(e) {
+        tbody.innerHTML = `<tr><td colspan="9" style="color:red;">${e.message}</td></tr>`;
+    }
+}
+
+function editNilaiNormal(data) {
+    openModalNilaiNormal(data, false);
+}
+
+function copyNilaiNormal(data) {
+    openModalNilaiNormal(data, true);
+}
+
+function openModalNilaiNormalForCurrent() {
+    openModalNilaiNormal(null, false, selectedPemeriksaanId);
+}
+
+function openModalNilaiNormal(data, isCopy, preselectedId) {
+    const isEdit = !!data && !isCopy;
+    const label = isEdit ? 'Edit' : isCopy ? 'Copy' : 'Tambah';
     loadPemeriksaanDropdown("fNilaiPemeriksaan");
-    setTimeout(()=>{
-        const sel=document.getElementById("fNilaiPemeriksaan");
-        if (isEdit&&sel) sel.value=data.id_pemeriksaan;
-    },100);
-    document.getElementById("modalContent").innerHTML=`
-        <h3>${isEdit?'Edit':'Tambah'} Nilai Normal</h3>
+    setTimeout(() => {
+        const sel = document.getElementById("fNilaiPemeriksaan");
+        if (data && sel) sel.value = data.id_pemeriksaan;
+        else if (preselectedId && sel) sel.value = preselectedId;
+    }, 100);
+    document.getElementById("modalContent").innerHTML = `
+        <h3>${label} Nilai Normal</h3>
         <div class="form-group"><label>Pemeriksaan</label><select id="fNilaiPemeriksaan"></select></div>
         <div class="form-row"><div class="form-group"><label>JK (kosongkan untuk semua)</label>
-        <select id="fNilaiJk"><option value="">Semua</option><option value="L" ${isEdit&&data.jenis_kelamin==='L'?'selected':''}>Laki-laki</option><option value="P" ${isEdit&&data.jenis_kelamin==='P'?'selected':''}>Perempuan</option></select></div>
+        <select id="fNilaiJk"><option value="">Semua</option><option value="L" ${data && data.jenis_kelamin === 'L' ? 'selected' : ''}>Laki-laki</option><option value="P" ${data && data.jenis_kelamin === 'P' ? 'selected' : ''}>Perempuan</option></select></div>
         <div class="form-group"><label>Tipe</label><select id="fNilaiTipe" onchange="toggleNilaiFields()">
-            <option value="range" ${isEdit&&data.jenis_nilai==='range'?'selected':''}>Range</option>
-            <option value="operator" ${isEdit&&data.jenis_nilai==='operator'?'selected':''}>Operator</option>
-            <option value="text" ${isEdit&&data.jenis_nilai==='text'?'selected':''}>Text</option>
+            <option value="range" ${data && data.jenis_nilai === 'range' ? 'selected' : ''}>Range</option>
+            <option value="operator" ${data && data.jenis_nilai === 'operator' ? 'selected' : ''}>Operator</option>
+            <option value="text" ${data && data.jenis_nilai === 'text' ? 'selected' : ''}>Text</option>
         </select></div></div>
-        <div id="nilaiRangeFields"><div class="form-row"><div class="form-group"><label>Bawah</label><input type="number" step="any" id="fNilaiBawah" value="${isEdit?data.nilai_bawah??'':''}"></div>
-        <div class="form-group"><label>Atas</label><input type="number" step="any" id="fNilaiAtas" value="${isEdit?data.nilai_atas??'':''}"></div></div></div>
+        <div id="nilaiRangeFields"><div class="form-row"><div class="form-group"><label>Bawah</label><input type="number" step="any" id="fNilaiBawah" value="${data ? data.nilai_bawah ?? '' : ''}"></div>
+        <div class="form-group"><label>Atas</label><input type="number" step="any" id="fNilaiAtas" value="${data ? data.nilai_atas ?? '' : ''}"></div></div></div>
         <div id="nilaiOperatorFields" style="display:none;"><div class="form-row"><div class="form-group"><label>Operator</label>
-        <select id="fNilaiOperator"><option value="<" ${isEdit&&data.operator==='<'?'selected':''}>&lt;</option><option value=">" ${isEdit&&data.operator==='>'?'selected':''}>&gt;</option><option value="<=" ${isEdit&&data.operator==='<='?'selected':''}>&lt;=</option><option value=">=" ${isEdit&&data.operator==='>='?'selected':''}>&gt;=</option></select></div>
-        <div class="form-group"><label>Nilai</label><input type="number" step="any" id="fNilaiOperatorVal" value="${isEdit?data.nilai_operator??'':''}"></div></div></div>
-        <div id="nilaiTextField" style="display:none;"><div class="form-group"><label>Text</label><input type="text" id="fNilaiText" value="${isEdit?data.nilai_text||'':''}"></div></div>
-        <div class="form-row"><div class="form-group"><label>Usia Min (hari)</label><input type="number" id="fNilaiUsiaMin" value="${isEdit?data.usia_hari_min:0}"></div>
-        <div class="form-group"><label>Usia Max (hari)</label><input type="number" id="fNilaiUsiaMax" value="${isEdit?data.usia_hari_max:99999}"></div></div>
-        <div class="form-group"><label>Keterangan</label><input type="text" id="fNilaiKet" value="${isEdit?data.keterangan||'':''}"></div>
+        <select id="fNilaiOperator"><option value="<" ${data && data.operator === '<' ? 'selected' : ''}>&lt;</option><option value=">" ${data && data.operator === '>' ? 'selected' : ''}>&gt;</option><option value="<=" ${data && data.operator === '<=' ? 'selected' : ''}>&lt;=</option><option value=">=" ${data && data.operator === '>=' ? 'selected' : ''}>&gt;=</option></select></div>
+        <div class="form-group"><label>Nilai</label><input type="number" step="any" id="fNilaiOperatorVal" value="${data ? data.nilai_operator ?? '' : ''}"></div></div></div>
+        <div id="nilaiTextField" style="display:none;"><div class="form-group"><label>Text</label><input type="text" id="fNilaiText" value="${data ? data.nilai_text || '' : ''}"></div></div>
+        <div class="form-row"><div class="form-group"><label>Usia Min (hari)</label><input type="number" id="fNilaiUsiaMin" value="${data ? data.usia_hari_min : 0}"></div>
+        <div class="form-group"><label>Usia Max (hari)</label><input type="number" id="fNilaiUsiaMax" value="${data ? data.usia_hari_max : 99999}"></div></div>
+        <div class="form-group"><label>Keterangan</label><input type="text" id="fNilaiKet" value="${data ? data.keterangan || '' : ''}"></div>
         <div class="modal-actions">
             <button class="btn btn-outline" onclick="closeModal()">Batal</button>
-            <button class="btn btn-primary" onclick="simpanNilaiNormal(${isEdit?data.id_nilai_normal:'null'})">Simpan</button>
+            <button class="btn btn-primary" onclick="simpanNilaiNormal(${isEdit ? data.id_nilai_normal : 'null'})">${isCopy ? 'Copy' : 'Simpan'}</button>
         </div>`;
     document.getElementById("modalOverlay").classList.add("open");
     toggleNilaiFields();
 }
 
 function toggleNilaiFields() {
-    const t=document.getElementById("fNilaiTipe").value;
-    document.getElementById("nilaiRangeFields").style.display=t==='range'?'block':'none';
-    document.getElementById("nilaiOperatorFields").style.display=t==='operator'?'block':'none';
-    document.getElementById("nilaiTextField").style.display=t==='text'?'block':'none';
+    const t = document.getElementById("fNilaiTipe").value;
+    document.getElementById("nilaiRangeFields").style.display = t === 'range' ? 'block' : 'none';
+    document.getElementById("nilaiOperatorFields").style.display = t === 'operator' ? 'block' : 'none';
+    document.getElementById("nilaiTextField").style.display = t === 'text' ? 'block' : 'none';
 }
 
 async function simpanNilaiNormal(id) {
-    const body={id_pemeriksaan:parseInt(document.getElementById("fNilaiPemeriksaan").value),jenis_kelamin:document.getElementById("fNilaiJk").value||null,usia_hari_min:parseInt(document.getElementById("fNilaiUsiaMin").value)||0,usia_hari_max:parseInt(document.getElementById("fNilaiUsiaMax").value)||99999,jenis_nilai:document.getElementById("fNilaiTipe").value,nilai_bawah:parseFloat(document.getElementById("fNilaiBawah").value)||null,nilai_atas:parseFloat(document.getElementById("fNilaiAtas").value)||null,operator:document.getElementById("fNilaiOperator").value||null,nilai_operator:parseFloat(document.getElementById("fNilaiOperatorVal").value)||null,nilai_text:document.getElementById("fNilaiText").value||null,keterangan:document.getElementById("fNilaiKet").value||null};
+    const body = {id_pemeriksaan: parseInt(document.getElementById("fNilaiPemeriksaan").value), jenis_kelamin: document.getElementById("fNilaiJk").value || null, usia_hari_min: parseInt(document.getElementById("fNilaiUsiaMin").value) || 0, usia_hari_max: parseInt(document.getElementById("fNilaiUsiaMax").value) || 99999, jenis_nilai: document.getElementById("fNilaiTipe").value, nilai_bawah: parseFloat(document.getElementById("fNilaiBawah").value) || null, nilai_atas: parseFloat(document.getElementById("fNilaiAtas").value) || null, operator: document.getElementById("fNilaiOperator").value || null, nilai_operator: parseFloat(document.getElementById("fNilaiOperatorVal").value) || null, nilai_text: document.getElementById("fNilaiText").value || null, keterangan: document.getElementById("fNilaiKet").value || null};
     try {
-        if (id) { await api(`${BASE}/nilai-normal/${id}`,{method:"PUT",body:JSON.stringify(body)}); }
-        else { await api(`${BASE}/nilai-normal/`,{method:"POST",body:JSON.stringify(body)}); }
-        closeModal(); loadNilaiNormal();
-    } catch(e) { alert("Error: "+e.message); }
+        if (id) { await api(`${BASE}/nilai-normal/${id}`, {method: "PUT", body: JSON.stringify(body)}); }
+        else { await api(`${BASE}/nilai-normal/`, {method: "POST", body: JSON.stringify(body)}); }
+        closeModal();
+        if (selectedPemeriksaanId) loadNilaiNormalDetail(selectedPemeriksaanId);
+    } catch(e) { alert("Error: " + e.message); }
 }
 
-async function hapusNilaiNormal(id) { if(!confirm("Hapus?"))return; try{await api(`${BASE}/nilai-normal/${id}`,{method:"DELETE"});loadNilaiNormal();}catch(e){alert(e.message);} }
+async function hapusNilaiNormal(id) { if (!confirm("Hapus?")) return; try { await api(`${BASE}/nilai-normal/${id}`, {method: "DELETE"}); if (selectedPemeriksaanId) loadNilaiNormalDetail(selectedPemeriksaanId); } catch(e) { alert(e.message); } }
 
 // ── KUNJUNGAN ───────────────────────────────────────
 async function loadPasienDropdown() {
