@@ -161,22 +161,31 @@ class PemeriksaanPasienService:
     def list_pemeriksaan(self, id_kunjungan: int):
         repo = PemeriksaanPasienRepository(self.db)
         rows = repo.get_by_kunjungan(id_kunjungan)
-        return [
-            {
+        result = []
+        for r in rows:
+            nama_item = None
+            if r.jenis == "SATUAN" and r.id_pemeriksaan:
+                pemeriksaan = self.db.query(Pemeriksaan).get(r.id_pemeriksaan)
+                nama_item = pemeriksaan.nama_pemeriksaan if pemeriksaan else None
+            elif r.jenis == "PAKET" and r.id_paket:
+                paket = self.db.query(PaketPemeriksaan).get(r.id_paket)
+                nama_item = paket.nama_paket if paket else None
+
+            result.append({
                 "id": r.id,
                 "id_pemeriksaan_lab": r.id_pemeriksaan_lab,
                 "id_kunjungan": r.id_kunjungan,
                 "jenis": r.jenis,
                 "id_pemeriksaan": r.id_pemeriksaan,
                 "id_paket": r.id_paket,
+                "nama_item": nama_item,
                 "biaya_dibebankan": r.biaya_dibebankan,
                 "jam_mulai": str(r.jam_mulai) if r.jam_mulai else None,
                 "jam_selesai": str(r.jam_selesai) if r.jam_selesai else None,
                 "jam_seharusnya_selesai": str(r.jam_seharusnya_selesai) if r.jam_seharusnya_selesai else None,
                 "status": r.status,
-            }
-            for r in rows
-        ]
+            })
+        return result
 
     def mulai_pemeriksaan_lab(self, id_kunjungan: int, current_user_id: int):
         with UnitOfWork(self.db) as uow:
@@ -251,4 +260,49 @@ class PemeriksaanPasienService:
                 "jam_selesai": str(pp.jam_selesai),
                 "status": pp.status,
                 "status_lab": lab.status if lab else None,
+            }
+
+    def selesai_pemeriksaan_lab(self, id_kunjungan: int):
+        with UnitOfWork(self.db) as uow:
+            lab = PemeriksaanLabRepository(self.db).get_by_kunjungan(id_kunjungan)
+            if not lab:
+                return None
+
+            rows = PemeriksaanPasienRepository(self.db).get_by_lab(lab.id_pemeriksaan_lab)
+            if not rows:
+                rows = PemeriksaanPasienRepository(self.db).get_by_kunjungan(id_kunjungan)
+
+            if not rows:
+                raise Exception("Belum ada pemeriksaan untuk kunjungan ini")
+
+            hasil_repo = HasilPemeriksaanRepository(self.db)
+            kurang = []
+            for pp in rows:
+                hasil_rows = hasil_repo.get_by_pemeriksaan_pasien(pp.id)
+                if not hasil_rows or not all(
+                    any([
+                        h.nilai_bawah is not None,
+                        h.nilai_atas is not None,
+                        h.nilai_value is not None,
+                        bool(h.nilai_text),
+                    ])
+                    for h in hasil_rows
+                ):
+                    kurang.append(pp.id)
+
+            if kurang:
+                raise Exception("Masih ada hasil pemeriksaan yang belum diisi")
+
+            now = datetime.now()
+            lab.status = "SELESAI"
+            lab.jam_selesai = lab.jam_selesai or now
+            for pp in rows:
+                pp.status = "SELESAI"
+                pp.jam_selesai = pp.jam_selesai or now
+
+            return {
+                "id_pemeriksaan_lab": lab.id_pemeriksaan_lab,
+                "id_kunjungan": lab.id_kunjungan,
+                "jam_selesai": str(lab.jam_selesai),
+                "status": lab.status,
             }

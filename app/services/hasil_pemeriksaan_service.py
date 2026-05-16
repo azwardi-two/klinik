@@ -2,6 +2,8 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from app.models.hasil_pemeriksaan import HasilPemeriksaan
 from app.models.kunjungan import Kunjungan
+from app.models.nilai_normal import NilaiNormal
+from app.models.pemeriksaan import Pemeriksaan
 from app.models.pemeriksaan_pasien import PemeriksaanPasien
 from app.models.pemeriksaan_lab import PemeriksaanLab
 from app.models.pasien import Pasien
@@ -39,23 +41,71 @@ class HasilPemeriksaanService:
                         lab.status = "SELESAI"
                         lab.jam_selesai = lab.jam_selesai or now
 
+    def _get_nilai_normal_match(self, id_pemeriksaan, jenis_kelamin=None, umur_hari=None):
+        rows = self.db.query(NilaiNormal).filter(
+            NilaiNormal.id_pemeriksaan == id_pemeriksaan
+        ).all()
+        for n in rows:
+            if n.jenis_kelamin and jenis_kelamin and n.jenis_kelamin != jenis_kelamin:
+                continue
+            if umur_hari is not None and not (n.usia_hari_min <= umur_hari <= n.usia_hari_max):
+                continue
+            return n
+        return rows[0] if rows else None
+
+    def _format_nilai_normal(self, n):
+        if not n:
+            return None
+        if n.jenis_nilai == "range":
+            bawah = f"{n.nilai_bawah:g}" if n.nilai_bawah is not None else "-"
+            atas = f"{n.nilai_atas:g}" if n.nilai_atas is not None else "-"
+            return f"{bawah} - {atas}"
+        if n.jenis_nilai == "operator":
+            return f"{n.operator or ''} {n.nilai_operator:g}".strip() if n.nilai_operator is not None else n.operator
+        if n.jenis_nilai == "text":
+            return n.nilai_text
+        return None
+
     def get_hasil_by_pemeriksaan_pasien(self, id_pemeriksaan_pasien: int):
         repo = HasilPemeriksaanRepository(self.db)
         rows = repo.get_by_pemeriksaan_pasien(id_pemeriksaan_pasien)
-        return [
-            {
+        pp = self.db.query(PemeriksaanPasien).get(id_pemeriksaan_pasien)
+        jenis_kelamin = None
+        umur_hari = None
+        if pp:
+            kunjungan = self.db.query(Kunjungan).get(pp.id_kunjungan)
+            if kunjungan:
+                umur_hari = kunjungan.umur_hari_pasien
+                pasien = self.db.query(Pasien).get(kunjungan.idpasien)
+                jenis_kelamin = pasien.jenis_kelamin if pasien else None
+
+        result = []
+        for r in rows:
+            pemeriksaan = self.db.query(Pemeriksaan).get(r.id_pemeriksaan)
+            normal = self._get_nilai_normal_match(r.id_pemeriksaan, jenis_kelamin, umur_hari)
+            result.append({
                 "id": r.id,
                 "id_pemeriksaan_pasien": r.id_pemeriksaan_pasien,
                 "id_pemeriksaan": r.id_pemeriksaan,
+                "nama_pemeriksaan": pemeriksaan.nama_pemeriksaan if pemeriksaan else None,
                 "nilai_bawah": r.nilai_bawah,
                 "nilai_atas": r.nilai_atas,
                 "nilai_value": r.nilai_value,
                 "nilai_text": r.nilai_text,
                 "status_nilai": r.status_nilai,
                 "keterangan": r.keterangan,
-            }
-            for r in rows
-        ]
+                "nilai_normal": {
+                    "jenis_nilai": normal.jenis_nilai,
+                    "nilai_bawah": normal.nilai_bawah,
+                    "nilai_atas": normal.nilai_atas,
+                    "operator": normal.operator,
+                    "nilai_operator": normal.nilai_operator,
+                    "nilai_text": normal.nilai_text,
+                    "keterangan": normal.keterangan,
+                    "label": self._format_nilai_normal(normal),
+                } if normal else None,
+            })
+        return result
 
     def update_hasil(self, id_hasil: int, data):
         with UnitOfWork(self.db) as uow:

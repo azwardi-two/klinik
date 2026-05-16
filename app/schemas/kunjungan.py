@@ -13,6 +13,11 @@ class KunjunganCreate(BaseModel):
     jenis_kelamin: Optional[str] = None              
     no_hp: Optional[str] = None
 
+class KunjunganUpdate(BaseModel):
+    keluhan: Optional[str] = None
+    tgl_kunjungan: Optional[date] = None
+    status: Optional[str] = None
+
 class KunjunganListItem(BaseModel):
     tgl_kunjungan: date
     no_reg: str
@@ -25,4 +30,4 @@ class KunjunganListResponse(BaseModel):
     total: int
     page: int
     limit: int
-    total_pages: int 
+    total_pages: int

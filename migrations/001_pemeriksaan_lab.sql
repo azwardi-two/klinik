@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS pemeriksaan_lab (
+go CREATE TABLE IF NOT EXISTS pemeriksaan_lab (
     id_pemeriksaan_lab INT AUTO_INCREMENT PRIMARY KEY,
     id_kunjungan INT NOT NULL,
     status VARCHAR(20) DEFAULT 'REGISTER',

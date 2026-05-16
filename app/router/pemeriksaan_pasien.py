@@ -49,6 +49,22 @@ def mulai_pemeriksaan_lab(
     return result
 
 
+@router.put("/{id_kunjungan}/pemeriksaan-lab/selesai")
+def selesai_pemeriksaan_lab(
+    id_kunjungan: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = PemeriksaanPasienService(db)
+    try:
+        result = service.selesai_pemeriksaan_lab(id_kunjungan)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not result:
+        raise HTTPException(status_code=404, detail="Pemeriksaan lab tidak ditemukan")
+    return result
+
+
 router_mulai = APIRouter(prefix="/pemeriksaan-pasien", tags=["Pemeriksaan Pasien"])
 
 

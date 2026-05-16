@@ -47,11 +47,6 @@
 
         .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
         .card h3 { font-size: 15px; margin-bottom: 16px; color: #333; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
-        .stat-card { background: #fff; border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-        .stat-card .num { font-size: 28px; font-weight: 700; color: #1a73e8; }
-        .stat-card .label { font-size: 12px; color: #666; margin-top: 4px; }
-
         .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
         .toolbar input, .toolbar select { width: auto; min-width: 140px; }
         .toolbar .spacer { flex: 1; }
@@ -79,6 +74,9 @@
         .badge-high { background: #fce8e6; color: #d93025; }
         .badge-lunas { background: #e6f4ea; color: #188038; }
         .badge-belum { background: #fef7e0; color: #e37400; }
+        .field-disabled { background: #f3f4f6; color: #888; cursor: not-allowed; }
+        .lab-summary { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 12px; }
+        .normal-ref { font-size: 12px; color: #444; line-height: 1.4; min-width: 160px; }
 
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; justify-content: center; align-items: center; }
         .modal-overlay.open { display: flex; }
@@ -90,10 +88,6 @@
         .modal .form-row { display: flex; gap: 12px; }
         .modal .form-row .form-group { flex: 1; }
         .modal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
-
-        .overdue-row td { vertical-align: middle; }
-        .overdue-row .overdue-warning { color: #d93025; font-weight: 600; }
-        .overdue-row .overdue-ok { color: #188038; }
 
         .inline-flex { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
         .mt-12 { margin-top: 12px; }
@@ -153,8 +147,7 @@
             <span id="sidebarUserId" style="color:#666;font-size:11px;"></span>
         </div>
         <nav>
-            <a onclick="showSection('dashboard')" class="active" data-section="dashboard">📊 Dashboard</a>
-            <a onclick="showSection('pemeriksaan')" data-section="pemeriksaan">🔬 Pemeriksaan</a>
+            <a onclick="showSection('pemeriksaan')" class="active" data-section="pemeriksaan">🔬 Pemeriksaan</a>
             <a onclick="showSection('paket')" data-section="paket">📦 Paket</a>
             <a onclick="showSection('nilai-normal')" data-section="nilai-normal">📏 Nilai Normal</a>
             <a onclick="showSection('kunjungan')" data-section="kunjungan">🏥 Kunjungan</a>
@@ -165,22 +158,11 @@
         </nav>
     </div>
     <div class="main">
-        <div class="topbar"><h2 id="pageTitle">Dashboard</h2></div>
+        <div class="topbar"><h2 id="pageTitle">Master Pemeriksaan</h2></div>
         <div class="content">
 
-<!-- ===== DASHBOARD ===== -->
-<div class="section active" id="sec-dashboard">
-    <div class="stats-grid" id="statsGrid"></div>
-    <div class="card">
-        <h3>⏰ Pemeriksaan Terlambat</h3>
-        <div style="overflow-x:auto;"><table><thead><tr>
-            <th>No Reg</th><th>Pasien</th><th>Detail</th><th>Mulai</th><th>Target Selesai</th><th>Terlambat</th><th>Status Lab</th>
-        </tr></thead><tbody id="tblOverdue"><tr><td colspan="7" class="text-muted">Memuat...</td></tr></tbody></table></div>
-    </div>
-</div>
-
 <!-- ===== PEMERIKSAAN ===== -->
-<div class="section" id="sec-pemeriksaan">
+<div class="section active" id="sec-pemeriksaan">
     <div class="card">
         <div class="toolbar">
             <input type="text" id="filterPemeriksaan" placeholder="Cari pemeriksaan..." oninput="loadPemeriksaan()">
@@ -266,10 +248,11 @@
             <select id="filterKunjunganPP" onchange="loadPemeriksaanPasien()" style="flex:1;"><option value="">-- Pilih Kunjungan --</option></select>
             <div class="spacer"></div>
             <button class="btn btn-success" id="btnMulaiLab" onclick="mulaiPemeriksaanLab()" style="display:none;">Mulai Lab</button>
+            <button class="btn btn-danger" id="btnSelesaiLab" onclick="selesaiPemeriksaanLab()" style="display:none;">Selesai Lab</button>
             <button class="btn btn-primary" onclick="openModalAddPemeriksaan()">+ Tambah Pemeriksaan</button>
             <button class="btn btn-info" onclick="refreshPP()">⟳</button>
         </div>
-        <div id="labSummary" class="text-muted mb-12">Pilih kunjungan terlebih dahulu</div>
+        <div id="labSummary" class="lab-summary text-muted mb-12">Pilih kunjungan terlebih dahulu</div>
         <div style="overflow-x:auto;"><table><thead><tr>
             <th>#</th><th>Jenis</th><th>Item</th><th>Biaya</th><th>Mulai</th><th>Target</th><th>Selesai</th><th>Status Detail</th><th>Aksi</th>
         </tr></thead><tbody id="tblPemeriksaanPasien"><tr><td colspan="9" class="text-muted">Pilih kunjungan terlebih dahulu</td></tr></tbody></table></div>
@@ -283,8 +266,8 @@
             <select id="filterKunjunganHasil" onchange="loadHasilList()" style="flex:1;"><option value="">-- Pilih Kunjungan --</option></select>
         </div>
         <div style="overflow-x:auto;"><table><thead><tr>
-            <th>Item</th><th>Nilai Bawah</th><th>Nilai Atas</th><th>Nilai Value</th><th>Nilai Text</th><th>Status</th><th>Aksi</th>
-        </tr></thead><tbody id="tblHasil"><tr><td colspan="7" class="text-muted">Pilih kunjungan terlebih dahulu</td></tr></tbody></table></div>
+            <th>Pemeriksaan</th><th>Nilai Normal</th><th>Nilai Bawah</th><th>Nilai Atas</th><th>Nilai Value</th><th>Nilai Text</th><th>Status</th><th>Aksi</th>
+        </tr></thead><tbody id="tblHasil"><tr><td colspan="8" class="text-muted">Pilih kunjungan terlebih dahulu</td></tr></tbody></table></div>
     </div>
 </div>
 
@@ -349,6 +332,20 @@ function statusBadge(status) {
     return `<span class="badge badge-${key}">${value}</span>`;
 }
 
+function hasilTerisi(h) {
+    return h.nilai_bawah!==null || h.nilai_atas!==null || h.nilai_value!==null || !!h.nilai_text;
+}
+
+function statusNilaiBadge(value) {
+    return value==='N'?'<span class="badge badge-normal">N</span>':value==='L'?'<span class="badge badge-low">L</span>':value==='H'?'<span class="badge badge-high">H</span>':'<span class="text-muted">-</span>';
+}
+
+function normalLabel(n) {
+    if (!n) return '<span class="text-muted">Belum ada nilai rujukan</span>';
+    const tipe=n.jenis_nilai||"-";
+    return `<div class="normal-ref"><strong>${tipe}</strong>: ${n.label||'-'}${n.keterangan?`<br>${n.keterangan}`:''}</div>`;
+}
+
 function showLogin() { document.getElementById("loginSection").style.display="block"; document.getElementById("registerSection").style.display="none"; }
 function showRegister() { document.getElementById("loginSection").style.display="none"; document.getElementById("registerSection").style.display="block"; }
 
@@ -386,10 +383,9 @@ function showSection(id) {
     document.getElementById("sec-"+id).classList.add("active");
     document.querySelectorAll(".sidebar nav a").forEach(a=>a.classList.remove("active"));
     document.querySelector(`.sidebar nav a[data-section="${id}"]`).classList.add("active");
-    const titles={dashboard:"Dashboard",pemeriksaan:"Master Pemeriksaan",paket:"Master Paket Pemeriksaan","nilai-normal":"Nilai Normal",kunjungan:"Kunjungan","pemeriksaan-pasien":"Pemeriksaan Pasien",hasil:"Input Hasil Pemeriksaan",tagihan:"Tagihan"};
+    const titles={pemeriksaan:"Master Pemeriksaan",paket:"Master Paket Pemeriksaan","nilai-normal":"Nilai Normal",kunjungan:"Kunjungan","pemeriksaan-pasien":"Pemeriksaan Pasien",hasil:"Input Hasil Pemeriksaan",tagihan:"Tagihan"};
     document.getElementById("pageTitle").textContent=titles[id]||id;
-    if (id==="dashboard") loadDashboard();
-    else if (id==="pemeriksaan") loadPemeriksaan();
+    if (id==="pemeriksaan") loadPemeriksaan();
     else if (id==="paket") loadPaket();
     else if (id==="nilai-normal") { loadPemeriksaanDropdown("filterNilaiPemeriksaan"); loadNilaiNormal(); }
     else if (id==="kunjungan") { loadPasienDropdown(); loadKunjunganList(); }
@@ -409,32 +405,7 @@ function initApp() {
     const now=new Date(); const off=now.getTimezoneOffset()*60000; const loc=new Date(now-off).toISOString().slice(0,10);
     document.getElementById("tglKunjungan").value=loc;
     document.getElementById("filterTglAwal").value=loc; document.getElementById("filterTglAkhir").value=loc;
-    loadDashboard();
-}
-
-// ── DASHBOARD ───────────────────────────────────────
-async function loadDashboard() {
-    try {
-        const r=await api(`${BASE}/dashboard/statistik`); const d=await r.json();
-        document.getElementById("statsGrid").innerHTML=`
-            <div class="stat-card"><div class="num">${d.total_hari_ini}</div><div class="label">Hari Ini</div></div>
-            <div class="stat-card"><div class="num" style="color:#e37400;">${d.total_order}</div><div class="label">Order</div></div>
-            <div class="stat-card"><div class="num" style="color:#1a73e8;">${d.total_proses}</div><div class="label">Proses</div></div>
-            <div class="stat-card"><div class="num" style="color:#d93025;">${d.total_overdue}</div><div class="label">Overdue</div></div>
-            <div class="stat-card"><div class="num" style="color:#188038;">${d.total_selesai}</div><div class="label">Selesai</div></div>`;
-    } catch(e) { document.getElementById("statsGrid").innerHTML=`<div class="text-muted">Gagal load statistik</div>`; }
-
-    try {
-        const r=await api(`${BASE}/dashboard/overdue`); const data=await r.json();
-        const tbody=document.getElementById("tblOverdue");
-        if (!data.length) { tbody.innerHTML='<tr><td colspan="7" class="text-muted">✅ Tidak ada pemeriksaan terlambat</td></tr>'; return; }
-        tbody.innerHTML=data.map(o=>`
-            <tr class="overdue-row"><td>${o.no_reg||'-'}</td><td>${o.nama_pasien||'-'}</td>
-            <td>${o.jumlah_detail||0} item</td><td>${formatDateTime(o.jam_mulai)}</td>
-            <td>${formatDateTime(o.jam_target)}</td>
-            <td class="overdue-warning">${o.terlambat||'-'}</td><td>${statusBadge(o.status)}</td></tr>
-        `).join("");
-    } catch(e) { document.getElementById("tblOverdue").innerHTML=`<tr><td colspan="7" style="color:red;">Gagal load: ${e.message}</td></tr>`; }
+    loadPemeriksaan();
 }
 
 // ── PEMERIKSAAN CRUD ────────────────────────────────
@@ -649,6 +620,7 @@ async function simpanKunjungan() {
         const d=await r.json();
         if (!r.ok) throw d;
         document.getElementById("resultKunjungan").innerHTML=`<div class="result" style="background:#e6f4ea;padding:10px;border-radius:6px;">✅ No RM: ${d.no_rm}, No Reg: ${d.no_reg}</div>`;
+        document.getElementById("keluhanKunjungan").value="";
         loadKunjunganList();
     } catch(e) { document.getElementById("resultKunjungan").innerHTML=`<div style="background:#fce8e6;padding:10px;border-radius:6px;color:#d93025;">❌ ${JSON.stringify(e)}</div>`; }
 }
@@ -665,7 +637,11 @@ async function loadKunjunganList() {
         document.getElementById("tblKunjungan").innerHTML=d.data.map(r=>`
             <tr><td>${r.tgl_kunjungan}</td><td>${r.no_reg}</td><td>${r.nama_pasien}</td><td>${r.keluhan||'-'}</td>
             <td><span class="badge badge-${r.status==='ORDER'?'order':r.status==='PROSES'?'proses':'selesai'}">${r.status}</span></td>
-            <td><button class="btn btn-info btn-sm" onclick="lihatPemeriksaanPasien(${r.id_kunjungan})">🔍 Detail</button></td></tr>
+            <td class="inline-flex">
+                <button class="btn btn-info btn-sm" onclick="lihatPemeriksaanPasien(${r.id_kunjungan})">Order</button>
+                <button class="btn btn-warning btn-sm" onclick='openModalEditKunjungan(${JSON.stringify(r).replace(/'/g,"&#39;")})'>✏</button>
+                <button class="btn btn-danger btn-sm" onclick="hapusKunjungan(${r.id_kunjungan})">🗑</button>
+            </td></tr>
         `).join("");
         // pagination
         const pg=document.getElementById("paginationKunjungan");
@@ -673,6 +649,44 @@ async function loadKunjunganList() {
         let html=''; for(let i=1;i<=d.total_pages;i++) html+=`<button class="${i===d.page?'btn btn-primary btn-sm':'btn btn-outline btn-sm'}" onclick="pageKunjungan=${i};loadKunjunganList()">${i}</button>`;
         pg.innerHTML=html;
     } catch(e) { document.getElementById("tblKunjungan").innerHTML=`<tr><td colspan="6" style="color:red;">${e.message}</td></tr>`; }
+}
+
+function openModalEditKunjungan(data) {
+    document.getElementById("modalContent").innerHTML=`
+        <h3>Edit Kunjungan</h3>
+        <div class="form-group"><label>No Reg</label><input type="text" value="${data.no_reg||''}" disabled class="field-disabled"></div>
+        <div class="form-row">
+            <div class="form-group"><label>Tanggal</label><input type="date" id="editTglKunjungan" value="${data.tgl_kunjungan||''}"></div>
+            <div class="form-group"><label>Status</label><select id="editStatusKunjungan">
+                ${["ORDER","PROSES","SELESAI"].map(s=>`<option value="${s}" ${data.status===s?'selected':''}>${s}</option>`).join("")}
+            </select></div>
+        </div>
+        <div class="form-group"><label>Keluhan</label><textarea id="editKeluhanKunjungan" rows="3">${data.keluhan||''}</textarea></div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+            <button class="btn btn-primary" onclick="simpanEditKunjungan(${data.id_kunjungan})">Simpan</button>
+        </div>`;
+    document.getElementById("modalOverlay").classList.add("open");
+}
+
+async function simpanEditKunjungan(id) {
+    const body={
+        tgl_kunjungan:document.getElementById("editTglKunjungan").value,
+        keluhan:document.getElementById("editKeluhanKunjungan").value,
+        status:document.getElementById("editStatusKunjungan").value,
+    };
+    try {
+        await api(`${BASE}/kunjungan/${id}`,{method:"PUT",body:JSON.stringify(body)});
+        closeModal(); loadKunjunganList();
+    } catch(e) { alert("Gagal update kunjungan: "+(e.detail||e.message)); }
+}
+
+async function hapusKunjungan(id) {
+    if (!confirm("Hapus kunjungan ini beserta pemeriksaan dan tagihan terkait?")) return;
+    try {
+        await api(`${BASE}/kunjungan/${id}`,{method:"DELETE"});
+        loadKunjunganList();
+    } catch(e) { alert("Gagal hapus kunjungan: "+(e.detail||e.message)); }
 }
 
 function lihatPemeriksaanPasien(idKunjungan) {
@@ -703,34 +717,52 @@ async function loadPemeriksaanPasien() {
     const tbody=document.getElementById("tblPemeriksaanPasien");
     const summary=document.getElementById("labSummary");
     const btnMulai=document.getElementById("btnMulaiLab");
+    const btnSelesai=document.getElementById("btnSelesaiLab");
     if (!idKunjungan) {
         tbody.innerHTML='<tr><td colspan="9" class="text-muted">Pilih kunjungan</td></tr>';
         summary.textContent="Pilih kunjungan terlebih dahulu";
         btnMulai.style.display="none";
+        btnSelesai.style.display="none";
         return;
     }
     try {
         const r=await api(`${BASE}/kunjungan/${idKunjungan}/pemeriksaan`); const data=await r.json();
+        const selected=document.getElementById("filterKunjunganPP");
+        const pasienLabel=selected.options[selected.selectedIndex]?.text||"";
         if (!data.length) {
             tbody.innerHTML='<tr><td colspan="9" class="text-muted">Belum ada pemeriksaan</td></tr>';
-            summary.textContent="Belum ada detail pemeriksaan lab";
+            summary.innerHTML=`<strong>${pasienLabel}</strong><span>Belum ada detail pemeriksaan lab</span>`;
             btnMulai.style.display="none";
+            btnSelesai.style.display="none";
             return;
         }
 
+        const hasilStatus=await Promise.all(data.map(async pp=>{
+            try {
+                const hr=await api(`${BASE}/hasil-pemeriksaan/${pp.id}`); const rows=await hr.json();
+                return rows.length>0 && rows.every(h=>hasilTerisi(h));
+            } catch(e) { return false; }
+        }));
         const labId=data[0].id_pemeriksaan_lab||"-";
         const statusLab=data.every(pp=>pp.status==="SELESAI") ? "SELESAI" : data.some(pp=>pp.status==="PROSES") ? "MULAI" : "REGISTER";
         const jamMulai=data.find(pp=>pp.jam_mulai)?.jam_mulai;
         const jamTarget=data.find(pp=>pp.jam_seharusnya_selesai)?.jam_seharusnya_selesai;
+        const jamSelesai=data.find(pp=>pp.jam_selesai)?.jam_selesai;
         const selesai=data.filter(pp=>pp.status==="SELESAI").length;
-        summary.innerHTML=`Lab #${labId} &nbsp; ${statusBadge(statusLab)} &nbsp; Mulai: ${formatDateTime(jamMulai)} &nbsp; Target: ${formatDateTime(jamTarget)} &nbsp; Selesai: ${selesai}/${data.length}`;
+        const allHasilLengkap=hasilStatus.every(Boolean);
+        summary.innerHTML=`<strong>${pasienLabel}</strong><span>Lab #${labId}</span>${statusBadge(statusLab)}<span>Mulai: ${formatDateTime(jamMulai)}</span><span>Target: ${formatDateTime(jamTarget)}</span><span>Selesai: ${formatDateTime(jamSelesai)}</span><span>Detail selesai: ${selesai}/${data.length}</span>`;
         btnMulai.style.display=statusLab==="REGISTER" ? "inline-flex" : "none";
+        btnSelesai.style.display=statusLab!=="REGISTER" && statusLab!=="SELESAI" ? "inline-flex" : "none";
+        btnSelesai.className=`btn ${allHasilLengkap?'btn-success':'btn-danger'}`;
+        btnSelesai.title=allHasilLengkap ? "Semua hasil sudah diisi" : "Masih ada hasil yang belum diisi";
+        btnSelesai.dataset.ready=allHasilLengkap ? "1" : "0";
         tbody.innerHTML=data.map((pp,i)=>`
             <tr><td>${i+1}</td><td><span class="badge ${pp.jenis==='SATUAN'?'badge-order':'badge-proses'}">${pp.jenis}</span></td>
-            <td>${pp.id_pemeriksaan||'Paket#'+pp.id_paket}</td><td>Rp ${(pp.biaya_dibebankan||0).toLocaleString()}</td>
+            <td>${pp.nama_item||pp.id_pemeriksaan||'Paket#'+pp.id_paket}</td><td>Rp ${(pp.biaya_dibebankan||0).toLocaleString()}</td>
             <td>${formatDateTime(pp.jam_mulai)}</td><td>${formatDateTime(pp.jam_seharusnya_selesai)}</td><td>${formatDateTime(pp.jam_selesai)}</td>
             <td>${statusBadge(pp.status)}</td>
             <td class="inline-flex">
+                <span class="badge ${hasilStatus[i]?'badge-normal':'badge-low'}">${hasilStatus[i]?'Hasil lengkap':'Belum lengkap'}</span>
                 ${pp.status==='PROSES'?`<button class="btn btn-warning btn-sm" onclick="selesaiPemeriksaan(${pp.id})">⏹ Selesai</button>`:''}
                 <button class="btn btn-info btn-sm" onclick="lihatHasil(${pp.id})">📋 Hasil</button>
             </td></tr>
@@ -746,7 +778,17 @@ async function mulaiPemeriksaanLab() {
     try{
         await api(`${BASE}/kunjungan/${idKunjungan}/pemeriksaan-lab/mulai`,{method:"PUT"});
         loadPemeriksaanPasien();
-        loadDashboard();
+    }catch(e){alert(e.message);}
+}
+
+async function selesaiPemeriksaanLab() {
+    const idKunjungan=document.getElementById("filterKunjunganPP").value;
+    const btn=document.getElementById("btnSelesaiLab");
+    if (!idKunjungan) { alert("Pilih kunjungan dulu"); return; }
+    if (btn.dataset.ready!=="1") { alert("Masih ada hasil pemeriksaan yang belum diisi"); return; }
+    try{
+        await api(`${BASE}/kunjungan/${idKunjungan}/pemeriksaan-lab/selesai`,{method:"PUT"});
+        loadPemeriksaanPasien();
     }catch(e){alert(e.message);}
 }
 
@@ -824,25 +866,29 @@ async function simpanPP(idKunjungan) {
 async function loadHasilList() {
     const idKunjungan=document.getElementById("filterKunjunganHasil").value;
     const tbody=document.getElementById("tblHasil");
-    if (!idKunjungan) { tbody.innerHTML='<tr><td colspan="7" class="text-muted">Pilih kunjungan</td></tr>'; return; }
+    if (!idKunjungan) { tbody.innerHTML='<tr><td colspan="8" class="text-muted">Pilih kunjungan</td></tr>'; return; }
     try {
         const r=await api(`${BASE}/kunjungan/${idKunjungan}/pemeriksaan`); const ppList=await r.json();
         let html='';
         for (const pp of ppList) {
             const hr=await api(`${BASE}/hasil-pemeriksaan/${pp.id}`); const hasilList=await hr.json();
             for (const h of hasilList) {
-                const st=h.status_nilai==='N'?'<span class="badge badge-normal">✅ N</span>':h.status_nilai==='L'?'<span class="badge badge-low">⬇ L</span>':h.status_nilai==='H'?'<span class="badge badge-high">⬆ H</span>':'<span class="text-muted">-</span>';
-                html+=`<tr><td>Periksa #${h.id_pemeriksaan}</td>
-                    <td><input type="number" step="any" class="form-input-sm" id="hb_${h.id}" value="${h.nilai_bawah??''}" style="width:90px;" onchange="simpanHasil(${h.id})" placeholder="-"></td>
-                    <td><input type="number" step="any" class="form-input-sm" id="ha_${h.id}" value="${h.nilai_atas??''}" style="width:90px;" onchange="simpanHasil(${h.id})" placeholder="-"></td>
-                    <td><input type="number" step="any" class="form-input-sm" id="hv_${h.id}" value="${h.nilai_value??''}" style="width:90px;" onchange="simpanHasil(${h.id})" placeholder="-"></td>
-                    <td><input type="text" class="form-input-sm" id="ht_${h.id}" value="${h.nilai_text||''}" style="width:100px;" onchange="simpanHasil(${h.id})" placeholder="-"></td>
-                    <td id="hs_${h.id}">${st}</td>
+                const tipe=(h.nilai_normal&&h.nilai_normal.jenis_nilai)||"";
+                const useRange=tipe==="range" || !tipe;
+                const useValue=tipe==="operator" || !tipe;
+                const useText=tipe==="text" || !tipe;
+                html+=`<tr><td><strong>${h.nama_pemeriksaan||'Periksa #'+h.id_pemeriksaan}</strong><br><span class="text-muted">${pp.nama_item||pp.jenis}</span></td>
+                    <td>${normalLabel(h.nilai_normal)}</td>
+                    <td><input type="number" step="any" class="${useRange?'':'field-disabled'}" id="hb_${h.id}" value="${h.nilai_bawah??''}" style="width:90px;" onchange="simpanHasil(${h.id})" placeholder="bawah" ${useRange?'':'disabled'}></td>
+                    <td><input type="number" step="any" class="${useRange?'':'field-disabled'}" id="ha_${h.id}" value="${h.nilai_atas??''}" style="width:90px;" onchange="simpanHasil(${h.id})" placeholder="atas" ${useRange?'':'disabled'}></td>
+                    <td><input type="number" step="any" class="${useValue?'':'field-disabled'}" id="hv_${h.id}" value="${h.nilai_value??''}" style="width:90px;" onchange="simpanHasil(${h.id})" placeholder="nilai" ${useValue?'':'disabled'}></td>
+                    <td><input type="text" class="${useText?'':'field-disabled'}" id="ht_${h.id}" value="${h.nilai_text||''}" style="width:120px;" onchange="simpanHasil(${h.id})" placeholder="text" ${useText?'':'disabled'}></td>
+                    <td id="hs_${h.id}">${statusNilaiBadge(h.status_nilai)}</td>
                     <td><button class="btn btn-primary btn-sm" onclick="simpanHasil(${h.id})">💾</button></td></tr>`;
             }
         }
-        tbody.innerHTML=html||'<tr><td colspan="7" class="text-muted">Belum ada hasil</td></tr>';
-    } catch(e) { tbody.innerHTML=`<tr><td colspan="7" style="color:red;">${e.message}</td></tr>`; }
+        tbody.innerHTML=html||'<tr><td colspan="8" class="text-muted">Belum ada hasil</td></tr>';
+    } catch(e) { tbody.innerHTML=`<tr><td colspan="8" style="color:red;">${e.message}</td></tr>`; }
 }
 
 async function simpanHasil(id) {
@@ -856,15 +902,17 @@ async function simpanHasil(id) {
         const d=await r.json();
         const st=d.status_nilai;
         const el=document.getElementById("hs_"+id);
-        if (el) el.innerHTML=st==='N'?'<span class="badge badge-normal">✅ N</span>':st==='L'?'<span class="badge badge-low">⬇ L</span>':st==='H'?'<span class="badge badge-high">⬆ H</span>':'<span class="text-muted">-</span>';
+        if (el) el.innerHTML=statusNilaiBadge(st);
     } catch(e) { console.error("Gagal simpan hasil",e); }
 }
 
 function lihatHasil(idPP) {
     const idKunjungan=document.getElementById("filterKunjunganPP").value;
-    document.getElementById("filterKunjunganHasil").value=idKunjungan;
     showSection("hasil");
-    loadHasilList();
+    loadKunjunganDropdown("filterKunjunganHasil", function() {
+        document.getElementById("filterKunjunganHasil").value=idKunjungan;
+        loadHasilList();
+    });
 }
 
 // ── TAGIHAN ─────────────────────────────────────────

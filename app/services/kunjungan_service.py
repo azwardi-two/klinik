@@ -1,6 +1,10 @@
 from datetime import datetime, date
 from app.models.pasien import Pasien
 from app.models.kunjungan import Kunjungan
+from app.models.hasil_pemeriksaan import HasilPemeriksaan
+from app.models.pemeriksaan_lab import PemeriksaanLab
+from app.models.pemeriksaan_pasien import PemeriksaanPasien
+from app.models.tagihan import TagihanPasien, TagihanPasienDetail
 from app.models.user import User
 from app.repositories.pasien import PasienRepository
 from app.repositories.kunjungan import KunjunganRepository
@@ -60,6 +64,8 @@ class KunjunganService:
             return {
                 "idpasien": pasien.id,
                 "no_rm": no_rm,
+                "no_reg": no_reg,
+                "id_kunjungan": kunjungan.id_kunjungan,
 
             }
 
@@ -88,4 +94,55 @@ class KunjunganService:
             "limit": limit,
             "total_pages": total_pages,
         }
+
+    def update_kunjungan(self, id_kunjungan: int, data):
+        with UnitOfWork(self.db) as uow:
+            kunjungan = self.db.query(Kunjungan).get(id_kunjungan)
+            if not kunjungan:
+                return None
+
+            if data.keluhan is not None:
+                kunjungan.keluhan = data.keluhan
+            if data.tgl_kunjungan is not None:
+                kunjungan.tgl_kunjungan = data.tgl_kunjungan
+            if data.status is not None:
+                kunjungan.status = data.status
+
+            return {
+                "id_kunjungan": kunjungan.id_kunjungan,
+                "tgl_kunjungan": kunjungan.tgl_kunjungan,
+                "no_reg": kunjungan.no_reg_kunjungan,
+                "keluhan": kunjungan.keluhan,
+                "status": kunjungan.status,
+            }
+
+    def delete_kunjungan(self, id_kunjungan: int):
+        with UnitOfWork(self.db) as uow:
+            kunjungan = self.db.query(Kunjungan).get(id_kunjungan)
+            if not kunjungan:
+                return False
+
+            tagihan_rows = self.db.query(TagihanPasien).filter(
+                TagihanPasien.id_kunjungan == id_kunjungan
+            ).all()
+            for tagihan in tagihan_rows:
+                self.db.query(TagihanPasienDetail).filter(
+                    TagihanPasienDetail.id_tagihan == tagihan.id
+                ).delete(synchronize_session=False)
+                self.db.delete(tagihan)
+
+            pemeriksaan_rows = self.db.query(PemeriksaanPasien).filter(
+                PemeriksaanPasien.id_kunjungan == id_kunjungan
+            ).all()
+            for pp in pemeriksaan_rows:
+                self.db.query(HasilPemeriksaan).filter(
+                    HasilPemeriksaan.id_pemeriksaan_pasien == pp.id
+                ).delete(synchronize_session=False)
+                self.db.delete(pp)
+
+            self.db.query(PemeriksaanLab).filter(
+                PemeriksaanLab.id_kunjungan == id_kunjungan
+            ).delete(synchronize_session=False)
+            self.db.delete(kunjungan)
+            return True
         
