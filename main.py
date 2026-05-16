@@ -5,6 +5,7 @@ from app.models import user as user_model
 from app.models import pemeriksaan as pemeriksaan_model
 from app.models import paket_pemeriksaan as paket_pemeriksaan_model
 from app.models import nilai_normal as nilai_normal_model
+from app.models import pemeriksaan_lab as pemeriksaan_lab_model
 from app.models import pemeriksaan_pasien as pemeriksaan_pasien_model
 from app.models import hasil_pemeriksaan as hasil_pemeriksaan_model
 from app.models import tagihan as tagihan_model

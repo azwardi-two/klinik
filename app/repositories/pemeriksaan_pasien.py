@@ -17,6 +17,11 @@ class PemeriksaanPasienRepository:
             PemeriksaanPasien.id_kunjungan == id_kunjungan
         ).order_by(PemeriksaanPasien.created_at.asc()).all()
 
+    def get_by_lab(self, id_pemeriksaan_lab: int):
+        return self.db.query(PemeriksaanPasien).filter(
+            PemeriksaanPasien.id_pemeriksaan_lab == id_pemeriksaan_lab
+        ).order_by(PemeriksaanPasien.created_at.asc()).all()
+
     def get_all_overdue(self):
         from datetime import datetime
         return self.db.query(PemeriksaanPasien).filter(

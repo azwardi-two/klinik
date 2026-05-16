@@ -15,6 +15,7 @@ class PemeriksaanPasienCreate(BaseModel):
 
 class PemeriksaanPasienResponse(BaseModel):
     id: int
+    id_pemeriksaan_lab: Optional[int] = None
     id_kunjungan: int
     jenis: str
     id_pemeriksaan: Optional[int] = None

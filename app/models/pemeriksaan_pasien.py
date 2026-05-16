@@ -7,6 +7,7 @@ class PemeriksaanPasien(Base):
     __tablename__ = "pemeriksaan_pasien"
 
     id = Column(Integer, primary_key=True)
+    id_pemeriksaan_lab = Column(Integer, ForeignKey("pemeriksaan_lab.id_pemeriksaan_lab"), nullable=True)
     id_kunjungan = Column(Integer, ForeignKey("kunjungan.id_kunjungan"), nullable=False)
     jenis = Column(String(10), nullable=False)
     id_pemeriksaan = Column(Integer, ForeignKey("pemeriksaan.id_pemeriksaan"), nullable=True)

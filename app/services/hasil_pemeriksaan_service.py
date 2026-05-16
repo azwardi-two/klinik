@@ -1,7 +1,9 @@
+from datetime import datetime
 from sqlalchemy.orm import Session
 from app.models.hasil_pemeriksaan import HasilPemeriksaan
 from app.models.kunjungan import Kunjungan
 from app.models.pemeriksaan_pasien import PemeriksaanPasien
+from app.models.pemeriksaan_lab import PemeriksaanLab
 from app.models.pasien import Pasien
 from app.repositories.hasil_pemeriksaan import HasilPemeriksaanRepository
 from app.services.nilai_normal_service import NilaiNormalService
@@ -11,6 +13,31 @@ from app.core.uow import UnitOfWork
 class HasilPemeriksaanService:
     def __init__(self, db: Session):
         self.db = db
+
+    def _hasil_sudah_diisi(self, hasil):
+        return any([
+            hasil.nilai_bawah is not None,
+            hasil.nilai_atas is not None,
+            hasil.nilai_value is not None,
+            bool(hasil.nilai_text),
+        ])
+
+    def _sync_status_selesai(self, pp):
+        rows = HasilPemeriksaanRepository(self.db).get_by_pemeriksaan_pasien(pp.id)
+        if rows and all(self._hasil_sudah_diisi(row) for row in rows):
+            now = datetime.now()
+            pp.status = "SELESAI"
+            pp.jam_selesai = pp.jam_selesai or now
+
+            if pp.id_pemeriksaan_lab:
+                lab_rows = self.db.query(PemeriksaanPasien).filter(
+                    PemeriksaanPasien.id_pemeriksaan_lab == pp.id_pemeriksaan_lab
+                ).all()
+                if lab_rows and all(row.status == "SELESAI" for row in lab_rows):
+                    lab = self.db.query(PemeriksaanLab).get(pp.id_pemeriksaan_lab)
+                    if lab:
+                        lab.status = "SELESAI"
+                        lab.jam_selesai = lab.jam_selesai or now
 
     def get_hasil_by_pemeriksaan_pasien(self, id_pemeriksaan_pasien: int):
         repo = HasilPemeriksaanRepository(self.db)
@@ -73,6 +100,7 @@ class HasilPemeriksaanService:
                         umur_hari=umur_hari,
                     )
                     hasil.status_nilai = status
+                self._sync_status_selesai(pp)
 
             return {
                 "id": hasil.id,

@@ -1,11 +1,13 @@
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from app.models.pemeriksaan_pasien import PemeriksaanPasien
+from app.models.pemeriksaan_lab import PemeriksaanLab
 from app.models.kunjungan import Kunjungan
 from app.models.pemeriksaan import Pemeriksaan
 from app.models.paket_pemeriksaan import PaketPemeriksaan, PaketPemeriksaanDetail
 from app.models.hasil_pemeriksaan import HasilPemeriksaan
 from app.repositories.pemeriksaan_pasien import PemeriksaanPasienRepository
+from app.repositories.pemeriksaan_lab import PemeriksaanLabRepository
 from app.repositories.hasil_pemeriksaan import HasilPemeriksaanRepository
 from app.core.uow import UnitOfWork
 
@@ -13,6 +15,48 @@ from app.core.uow import UnitOfWork
 class PemeriksaanPasienService:
     def __init__(self, db: Session):
         self.db = db
+
+    def _get_or_create_lab(self, id_kunjungan: int, current_user_id: int):
+        lab_repo = PemeriksaanLabRepository(self.db)
+        lab = lab_repo.get_by_kunjungan(id_kunjungan)
+        if lab:
+            return lab
+
+        lab = PemeriksaanLab(
+            id_kunjungan=id_kunjungan,
+            status="REGISTER",
+            created_by=current_user_id,
+        )
+        lab_repo.create(lab)
+        self.db.flush()
+        return lab
+
+    def _get_total_lama_waktu(self, rows):
+        total_menit = 0
+        for pp in rows:
+            if pp.jenis == "SATUAN" and pp.id_pemeriksaan:
+                pemeriksaan = self.db.query(Pemeriksaan).get(pp.id_pemeriksaan)
+                if pemeriksaan:
+                    total_menit += pemeriksaan.lama_waktu or 0
+            elif pp.jenis == "PAKET" and pp.id_paket:
+                details = self.db.query(PaketPemeriksaanDetail).filter(
+                    PaketPemeriksaanDetail.id_paket == pp.id_paket
+                ).all()
+                for detail in details:
+                    pemeriksaan = self.db.query(Pemeriksaan).get(detail.id_pemeriksaan)
+                    if pemeriksaan:
+                        total_menit += pemeriksaan.lama_waktu or 0
+        return total_menit
+
+    def _sync_lab_target(self, lab):
+        if lab.status != "MULAI" or not lab.jam_mulai:
+            return
+
+        rows = PemeriksaanPasienRepository(self.db).get_by_lab(lab.id_pemeriksaan_lab)
+        lab.jam_target = lab.jam_mulai + timedelta(minutes=self._get_total_lama_waktu(rows))
+        for pp in rows:
+            if pp.status != "SELESAI":
+                pp.jam_seharusnya_selesai = lab.jam_target
 
     def add_pemeriksaan(self, id_kunjungan: int, data, current_user_id: int):
         kunjungan = self.db.query(Kunjungan).get(id_kunjungan)
@@ -22,6 +66,7 @@ class PemeriksaanPasienService:
         with UnitOfWork(self.db) as uow:
             repo = PemeriksaanPasienRepository(self.db)
             hasil_repo = HasilPemeriksaanRepository(self.db)
+            lab = self._get_or_create_lab(id_kunjungan, current_user_id)
             results = []
 
             for item in data.items:
@@ -34,11 +79,13 @@ class PemeriksaanPasienService:
                         raise Exception(f"Pemeriksaan id {item.id_pemeriksaan} tidak ditemukan")
 
                     pp = PemeriksaanPasien(
+                        id_pemeriksaan_lab=lab.id_pemeriksaan_lab,
                         id_kunjungan=id_kunjungan,
                         jenis="SATUAN",
                         id_pemeriksaan=item.id_pemeriksaan,
                         biaya_dibebankan=pemeriksaan.biaya,
-                        status="ORDER",
+                        status="PROSES" if lab.status == "MULAI" else "ORDER",
+                        jam_mulai=lab.jam_mulai if lab.status == "MULAI" else None,
                         created_by=current_user_id,
                     )
                     repo.create(pp)
@@ -52,6 +99,7 @@ class PemeriksaanPasienService:
 
                     results.append({
                         "id": pp.id,
+                        "id_pemeriksaan_lab": lab.id_pemeriksaan_lab,
                         "jenis": "SATUAN",
                         "id_pemeriksaan": item.id_pemeriksaan,
                         "biaya_dibebankan": pemeriksaan.biaya,
@@ -73,11 +121,13 @@ class PemeriksaanPasienService:
                         raise Exception(f"Paket id {item.id_paket} tidak memiliki detail")
 
                     pp = PemeriksaanPasien(
+                        id_pemeriksaan_lab=lab.id_pemeriksaan_lab,
                         id_kunjungan=id_kunjungan,
                         jenis="PAKET",
                         id_paket=item.id_paket,
                         biaya_dibebankan=paket.biaya_paket,
-                        status="ORDER",
+                        status="PROSES" if lab.status == "MULAI" else "ORDER",
+                        jam_mulai=lab.jam_mulai if lab.status == "MULAI" else None,
                         created_by=current_user_id,
                     )
                     repo.create(pp)
@@ -94,6 +144,7 @@ class PemeriksaanPasienService:
 
                     results.append({
                         "id": pp.id,
+                        "id_pemeriksaan_lab": lab.id_pemeriksaan_lab,
                         "jenis": "PAKET",
                         "id_paket": item.id_paket,
                         "biaya_dibebankan": paket.biaya_paket,
@@ -103,6 +154,8 @@ class PemeriksaanPasienService:
                 else:
                     raise Exception(f"Jenis '{item.jenis}' tidak valid")
 
+            self._sync_lab_target(lab)
+
             return results
 
     def list_pemeriksaan(self, id_kunjungan: int):
@@ -111,6 +164,7 @@ class PemeriksaanPasienService:
         return [
             {
                 "id": r.id,
+                "id_pemeriksaan_lab": r.id_pemeriksaan_lab,
                 "id_kunjungan": r.id_kunjungan,
                 "jenis": r.jenis,
                 "id_pemeriksaan": r.id_pemeriksaan,
@@ -124,39 +178,55 @@ class PemeriksaanPasienService:
             for r in rows
         ]
 
-    def mulai_pemeriksaan(self, id: int):
+    def mulai_pemeriksaan_lab(self, id_kunjungan: int, current_user_id: int):
         with UnitOfWork(self.db) as uow:
             repo = PemeriksaanPasienRepository(self.db)
-            pp = repo.get_by_id(id)
-            if not pp:
+            kunjungan = self.db.query(Kunjungan).get(id_kunjungan)
+            if not kunjungan:
                 return None
 
+            lab = self._get_or_create_lab(id_kunjungan, current_user_id)
+            rows = repo.get_by_lab(lab.id_pemeriksaan_lab)
+            if not rows:
+                rows = repo.get_by_kunjungan(id_kunjungan)
+                for pp in rows:
+                    pp.id_pemeriksaan_lab = lab.id_pemeriksaan_lab
+
+            if not rows:
+                raise Exception("Belum ada pemeriksaan untuk kunjungan ini")
+
             now = datetime.now()
-            pp.jam_mulai = now
-            pp.status = "PROSES"
+            if lab.status == "SELESAI":
+                raise Exception("Pemeriksaan lab sudah selesai")
 
-            if pp.jenis == "SATUAN" and pp.id_pemeriksaan:
-                pemeriksaan = self.db.query(Pemeriksaan).get(pp.id_pemeriksaan)
-                if pemeriksaan:
-                    pp.jam_seharusnya_selesai = now + timedelta(minutes=pemeriksaan.lama_waktu or 0)
+            if not lab.jam_mulai:
+                lab.jam_mulai = now
 
-            elif pp.jenis == "PAKET" and pp.id_paket:
-                details = self.db.query(PaketPemeriksaanDetail).filter(
-                    PaketPemeriksaanDetail.id_paket == pp.id_paket
-                ).all()
-                total_menit = 0
-                for d in details:
-                    p = self.db.query(Pemeriksaan).get(d.id_pemeriksaan)
-                    if p:
-                        total_menit += p.lama_waktu or 0
-                pp.jam_seharusnya_selesai = now + timedelta(minutes=total_menit)
+            lab.status = "MULAI"
+            lab.jam_target = lab.jam_mulai + timedelta(minutes=self._get_total_lama_waktu(rows))
+            lab.jam_selesai = None
+
+            for pp in rows:
+                if pp.status != "SELESAI":
+                    pp.status = "PROSES"
+                    pp.jam_mulai = lab.jam_mulai
+                    pp.jam_seharusnya_selesai = lab.jam_target
 
             return {
-                "id": pp.id,
-                "jam_mulai": str(pp.jam_mulai),
-                "jam_seharusnya_selesai": str(pp.jam_seharusnya_selesai),
-                "status": pp.status,
+                "id_pemeriksaan_lab": lab.id_pemeriksaan_lab,
+                "id_kunjungan": lab.id_kunjungan,
+                "jam_mulai": str(lab.jam_mulai) if lab.jam_mulai else None,
+                "jam_target": str(lab.jam_target) if lab.jam_target else None,
+                "status": lab.status,
+                "jumlah_detail": len(rows),
             }
+
+    def mulai_pemeriksaan(self, id: int, current_user_id: int = None):
+        repo = PemeriksaanPasienRepository(self.db)
+        pp = repo.get_by_id(id)
+        if not pp:
+            return None
+        return self.mulai_pemeriksaan_lab(pp.id_kunjungan, current_user_id or pp.created_by)
 
     def selesai_pemeriksaan(self, id: int):
         with UnitOfWork(self.db) as uow:
@@ -167,9 +237,18 @@ class PemeriksaanPasienService:
 
             pp.jam_selesai = datetime.now()
             pp.status = "SELESAI"
+            lab = None
+            if pp.id_pemeriksaan_lab:
+                lab = PemeriksaanLabRepository(self.db).get_by_id(pp.id_pemeriksaan_lab)
+                rows = repo.get_by_lab(pp.id_pemeriksaan_lab)
+                if rows and all(row.status == "SELESAI" for row in rows):
+                    lab.status = "SELESAI"
+                    lab.jam_selesai = pp.jam_selesai
 
             return {
                 "id": pp.id,
+                "id_pemeriksaan_lab": pp.id_pemeriksaan_lab,
                 "jam_selesai": str(pp.jam_selesai),
                 "status": pp.status,
+                "status_lab": lab.status if lab else None,
             }

@@ -33,6 +33,22 @@ def list_pemeriksaan(
     return service.list_pemeriksaan(id_kunjungan)
 
 
+@router.put("/{id_kunjungan}/pemeriksaan-lab/mulai")
+def mulai_pemeriksaan_lab(
+    id_kunjungan: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = PemeriksaanPasienService(db)
+    try:
+        result = service.mulai_pemeriksaan_lab(id_kunjungan, current_user.id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not result:
+        raise HTTPException(status_code=404, detail="Kunjungan tidak ditemukan")
+    return result
+
+
 router_mulai = APIRouter(prefix="/pemeriksaan-pasien", tags=["Pemeriksaan Pasien"])
 
 
@@ -43,7 +59,10 @@ def mulai_pemeriksaan(
     current_user: User = Depends(get_current_user),
 ):
     service = PemeriksaanPasienService(db)
-    result = service.mulai_pemeriksaan(id)
+    try:
+        result = service.mulai_pemeriksaan(id, current_user.id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
     if not result:
         raise HTTPException(status_code=404, detail="Pemeriksaan pasien tidak ditemukan")
     return result

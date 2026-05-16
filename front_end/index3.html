@@ -174,7 +174,7 @@
     <div class="card">
         <h3>⏰ Pemeriksaan Terlambat</h3>
         <div style="overflow-x:auto;"><table><thead><tr>
-            <th>No Reg</th><th>Pasien</th><th>Item</th><th>Mulai</th><th>Seharusnya Selesai</th><th>Terlambat</th><th>Status</th>
+            <th>No Reg</th><th>Pasien</th><th>Detail</th><th>Mulai</th><th>Target Selesai</th><th>Terlambat</th><th>Status Lab</th>
         </tr></thead><tbody id="tblOverdue"><tr><td colspan="7" class="text-muted">Memuat...</td></tr></tbody></table></div>
     </div>
 </div>
@@ -265,12 +265,14 @@
         <div class="toolbar">
             <select id="filterKunjunganPP" onchange="loadPemeriksaanPasien()" style="flex:1;"><option value="">-- Pilih Kunjungan --</option></select>
             <div class="spacer"></div>
+            <button class="btn btn-success" id="btnMulaiLab" onclick="mulaiPemeriksaanLab()" style="display:none;">Mulai Lab</button>
             <button class="btn btn-primary" onclick="openModalAddPemeriksaan()">+ Tambah Pemeriksaan</button>
             <button class="btn btn-info" onclick="refreshPP()">⟳</button>
         </div>
+        <div id="labSummary" class="text-muted mb-12">Pilih kunjungan terlebih dahulu</div>
         <div style="overflow-x:auto;"><table><thead><tr>
-            <th>#</th><th>Jenis</th><th>Item</th><th>Biaya</th><th>Mulai</th><th>Selesai</th><th>Status</th><th>Aksi</th>
-        </tr></thead><tbody id="tblPemeriksaanPasien"><tr><td colspan="8" class="text-muted">Pilih kunjungan terlebih dahulu</td></tr></tbody></table></div>
+            <th>#</th><th>Jenis</th><th>Item</th><th>Biaya</th><th>Mulai</th><th>Target</th><th>Selesai</th><th>Status Detail</th><th>Aksi</th>
+        </tr></thead><tbody id="tblPemeriksaanPasien"><tr><td colspan="9" class="text-muted">Pilih kunjungan terlebih dahulu</td></tr></tbody></table></div>
     </div>
 </div>
 
@@ -333,6 +335,18 @@ async function api(url, opts={}) {
     const r = await fetch(url, {...opts, headers:h});
     if (r.status===401) { clearToken(); location.reload(); throw new Error("Sesi habis"); }
     return r;
+}
+
+function formatDateTime(value) {
+    if (!value) return "-";
+    const parts = String(value).split(" ");
+    return parts.length > 1 ? parts[1].slice(0, 8) : String(value);
+}
+
+function statusBadge(status) {
+    const value = status || "-";
+    const key = value === "REGISTER" || value === "ORDER" ? "order" : value === "MULAI" || value === "PROSES" ? "proses" : "selesai";
+    return `<span class="badge badge-${key}">${value}</span>`;
 }
 
 function showLogin() { document.getElementById("loginSection").style.display="block"; document.getElementById("registerSection").style.display="none"; }
@@ -416,9 +430,9 @@ async function loadDashboard() {
         if (!data.length) { tbody.innerHTML='<tr><td colspan="7" class="text-muted">✅ Tidak ada pemeriksaan terlambat</td></tr>'; return; }
         tbody.innerHTML=data.map(o=>`
             <tr class="overdue-row"><td>${o.no_reg||'-'}</td><td>${o.nama_pasien||'-'}</td>
-            <td>${o.nama_item||'-'}</td><td>${o.jam_mulai?o.jam_mulai.slice(11,19):'-'}</td>
-            <td>${o.jam_seharusnya_selesai?o.jam_seharusnya_selesai.slice(11,19):'-'}</td>
-            <td class="overdue-warning">${o.terlambat||'-'}</td><td><span class="badge badge-proses">${o.status}</span></td></tr>
+            <td>${o.jumlah_detail||0} item</td><td>${formatDateTime(o.jam_mulai)}</td>
+            <td>${formatDateTime(o.jam_target)}</td>
+            <td class="overdue-warning">${o.terlambat||'-'}</td><td>${statusBadge(o.status)}</td></tr>
         `).join("");
     } catch(e) { document.getElementById("tblOverdue").innerHTML=`<tr><td colspan="7" style="color:red;">Gagal load: ${e.message}</td></tr>`; }
 }
@@ -687,25 +701,54 @@ async function loadKunjunganDropdown(selectId, cb) {
 async function loadPemeriksaanPasien() {
     const idKunjungan=document.getElementById("filterKunjunganPP").value;
     const tbody=document.getElementById("tblPemeriksaanPasien");
-    if (!idKunjungan) { tbody.innerHTML='<tr><td colspan="8" class="text-muted">Pilih kunjungan</td></tr>'; return; }
+    const summary=document.getElementById("labSummary");
+    const btnMulai=document.getElementById("btnMulaiLab");
+    if (!idKunjungan) {
+        tbody.innerHTML='<tr><td colspan="9" class="text-muted">Pilih kunjungan</td></tr>';
+        summary.textContent="Pilih kunjungan terlebih dahulu";
+        btnMulai.style.display="none";
+        return;
+    }
     try {
         const r=await api(`${BASE}/kunjungan/${idKunjungan}/pemeriksaan`); const data=await r.json();
-        if (!data.length) { tbody.innerHTML='<tr><td colspan="8" class="text-muted">Belum ada pemeriksaan</td></tr>'; return; }
+        if (!data.length) {
+            tbody.innerHTML='<tr><td colspan="9" class="text-muted">Belum ada pemeriksaan</td></tr>';
+            summary.textContent="Belum ada detail pemeriksaan lab";
+            btnMulai.style.display="none";
+            return;
+        }
+
+        const labId=data[0].id_pemeriksaan_lab||"-";
+        const statusLab=data.every(pp=>pp.status==="SELESAI") ? "SELESAI" : data.some(pp=>pp.status==="PROSES") ? "MULAI" : "REGISTER";
+        const jamMulai=data.find(pp=>pp.jam_mulai)?.jam_mulai;
+        const jamTarget=data.find(pp=>pp.jam_seharusnya_selesai)?.jam_seharusnya_selesai;
+        const selesai=data.filter(pp=>pp.status==="SELESAI").length;
+        summary.innerHTML=`Lab #${labId} &nbsp; ${statusBadge(statusLab)} &nbsp; Mulai: ${formatDateTime(jamMulai)} &nbsp; Target: ${formatDateTime(jamTarget)} &nbsp; Selesai: ${selesai}/${data.length}`;
+        btnMulai.style.display=statusLab==="REGISTER" ? "inline-flex" : "none";
         tbody.innerHTML=data.map((pp,i)=>`
             <tr><td>${i+1}</td><td><span class="badge ${pp.jenis==='SATUAN'?'badge-order':'badge-proses'}">${pp.jenis}</span></td>
             <td>${pp.id_pemeriksaan||'Paket#'+pp.id_paket}</td><td>Rp ${(pp.biaya_dibebankan||0).toLocaleString()}</td>
-            <td>${pp.jam_mulai?pp.jam_mulai.slice(11,19):'-'}</td><td>${pp.jam_selesai?pp.jam_selesai.slice(11,19):'-'}</td>
-            <td><span class="badge badge-${pp.status==='ORDER'?'order':pp.status==='PROSES'?'proses':'selesai'}">${pp.status}</span></td>
+            <td>${formatDateTime(pp.jam_mulai)}</td><td>${formatDateTime(pp.jam_seharusnya_selesai)}</td><td>${formatDateTime(pp.jam_selesai)}</td>
+            <td>${statusBadge(pp.status)}</td>
             <td class="inline-flex">
-                ${pp.status==='ORDER'?`<button class="btn btn-success btn-sm" onclick="mulaiPemeriksaan(${pp.id})">▶ Mulai</button>`:''}
                 ${pp.status==='PROSES'?`<button class="btn btn-warning btn-sm" onclick="selesaiPemeriksaan(${pp.id})">⏹ Selesai</button>`:''}
                 <button class="btn btn-info btn-sm" onclick="lihatHasil(${pp.id})">📋 Hasil</button>
             </td></tr>
         `).join("");
-    } catch(e) { tbody.innerHTML=`<tr><td colspan="8" style="color:red;">${e.message}</td></tr>`; }
+    } catch(e) { tbody.innerHTML=`<tr><td colspan="9" style="color:red;">${e.message}</td></tr>`; }
 }
 
 function refreshPP() { loadPemeriksaanPasien(); }
+
+async function mulaiPemeriksaanLab() {
+    const idKunjungan=document.getElementById("filterKunjunganPP").value;
+    if (!idKunjungan) { alert("Pilih kunjungan dulu"); return; }
+    try{
+        await api(`${BASE}/kunjungan/${idKunjungan}/pemeriksaan-lab/mulai`,{method:"PUT"});
+        loadPemeriksaanPasien();
+        loadDashboard();
+    }catch(e){alert(e.message);}
+}
 
 async function mulaiPemeriksaan(id) {
     try{await api(`${BASE}/pemeriksaan-pasien/${id}/mulai`,{method:"PUT"});loadPemeriksaanPasien();}catch(e){alert(e.message);}

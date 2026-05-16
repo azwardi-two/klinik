@@ -1,10 +1,9 @@
 from datetime import datetime, date
 from sqlalchemy.orm import Session
 from app.models.pemeriksaan_pasien import PemeriksaanPasien
+from app.models.pemeriksaan_lab import PemeriksaanLab
 from app.models.kunjungan import Kunjungan
 from app.models.pasien import Pasien
-from app.models.pemeriksaan import Pemeriksaan
-from app.models.paket_pemeriksaan import PaketPemeriksaan
 
 
 class DashboardService:
@@ -16,48 +15,44 @@ class DashboardService:
 
         rows = (
             self.db.query(
-                PemeriksaanPasien,
+                PemeriksaanLab,
                 Kunjungan.no_reg_kunjungan,
                 Kunjungan.tgl_kunjungan,
                 Pasien.nama,
                 Pasien.no_rm,
             )
-            .join(Kunjungan, PemeriksaanPasien.id_kunjungan == Kunjungan.id_kunjungan)
+            .join(Kunjungan, PemeriksaanLab.id_kunjungan == Kunjungan.id_kunjungan)
             .join(Pasien, Kunjungan.idpasien == Pasien.id)
             .filter(
-                PemeriksaanPasien.status.in_(["ORDER", "PROSES"]),
-                PemeriksaanPasien.jam_seharusnya_selesai.isnot(None),
-                PemeriksaanPasien.jam_seharusnya_selesai < now,
+                PemeriksaanLab.status != "SELESAI",
+                PemeriksaanLab.jam_target.isnot(None),
+                PemeriksaanLab.jam_target < now,
             )
-            .order_by(PemeriksaanPasien.jam_seharusnya_selesai.asc())
+            .order_by(PemeriksaanLab.jam_target.asc())
             .all()
         )
 
         result = []
-        for pp, no_reg, tgl, nama_pasien, no_rm in rows:
-            selisih = now - pp.jam_seharusnya_selesai
+        for lab, no_reg, tgl, nama_pasien, no_rm in rows:
+            selisih = now - lab.jam_target
             jam = int(selisih.total_seconds() // 3600)
             menit = int((selisih.total_seconds() % 3600) // 60)
-
-            nama_item = None
-            if pp.jenis == "SATUAN" and pp.id_pemeriksaan:
-                p = self.db.query(Pemeriksaan).get(pp.id_pemeriksaan)
-                nama_item = p.nama_pemeriksaan if p else None
-            elif pp.jenis == "PAKET" and pp.id_paket:
-                p = self.db.query(PaketPemeriksaan).get(pp.id_paket)
-                nama_item = p.nama_paket if p else None
+            jumlah_detail = self.db.query(PemeriksaanPasien).filter(
+                PemeriksaanPasien.id_pemeriksaan_lab == lab.id_pemeriksaan_lab
+            ).count()
 
             result.append({
-                "id_pemeriksaan_pasien": pp.id,
+                "id_pemeriksaan_lab": lab.id_pemeriksaan_lab,
+                "id_kunjungan": lab.id_kunjungan,
                 "no_reg": no_reg,
                 "tgl_kunjungan": str(tgl) if tgl else None,
                 "nama_pasien": nama_pasien,
                 "no_rm": no_rm,
-                "jenis": pp.jenis,
-                "nama_item": nama_item,
-                "status": pp.status,
-                "jam_mulai": str(pp.jam_mulai) if pp.jam_mulai else None,
-                "jam_seharusnya_selesai": str(pp.jam_seharusnya_selesai) if pp.jam_seharusnya_selesai else None,
+                "status": lab.status,
+                "jam_mulai": str(lab.jam_mulai) if lab.jam_mulai else None,
+                "jam_target": str(lab.jam_target) if lab.jam_target else None,
+                "jam_selesai": str(lab.jam_selesai) if lab.jam_selesai else None,
+                "jumlah_detail": jumlah_detail,
                 "terlambat": f"{jam} jam {menit} menit",
                 "terlambat_menit": int(selisih.total_seconds() // 60),
             })
@@ -69,36 +64,36 @@ class DashboardService:
         today = date.today()
 
         total_hari_ini = (
-            self.db.query(PemeriksaanPasien)
-            .join(Kunjungan, PemeriksaanPasien.id_kunjungan == Kunjungan.id_kunjungan)
+            self.db.query(PemeriksaanLab)
+            .join(Kunjungan, PemeriksaanLab.id_kunjungan == Kunjungan.id_kunjungan)
             .filter(Kunjungan.tgl_kunjungan == today)
             .count()
         )
 
         total_selesai = (
-            self.db.query(PemeriksaanPasien)
-            .filter(PemeriksaanPasien.status == "SELESAI")
+            self.db.query(PemeriksaanLab)
+            .filter(PemeriksaanLab.status == "SELESAI")
             .count()
         )
 
         total_proses = (
-            self.db.query(PemeriksaanPasien)
-            .filter(PemeriksaanPasien.status == "PROSES")
+            self.db.query(PemeriksaanLab)
+            .filter(PemeriksaanLab.status == "MULAI")
             .count()
         )
 
         total_order = (
-            self.db.query(PemeriksaanPasien)
-            .filter(PemeriksaanPasien.status == "ORDER")
+            self.db.query(PemeriksaanLab)
+            .filter(PemeriksaanLab.status == "REGISTER")
             .count()
         )
 
         total_overdue = (
-            self.db.query(PemeriksaanPasien)
+            self.db.query(PemeriksaanLab)
             .filter(
-                PemeriksaanPasien.status.in_(["ORDER", "PROSES"]),
-                PemeriksaanPasien.jam_seharusnya_selesai.isnot(None),
-                PemeriksaanPasien.jam_seharusnya_selesai < now,
+                PemeriksaanLab.status != "SELESAI",
+                PemeriksaanLab.jam_target.isnot(None),
+                PemeriksaanLab.jam_target < now,
             )
             .count()
         )
