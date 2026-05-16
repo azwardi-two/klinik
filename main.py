@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from app.core.database import Base, engine
 from app.router import kunjungan, pasien, auth, pemeriksaan, paket_pemeriksaan, nilai_normal, pemeriksaan_pasien, hasil_pemeriksaan, tagihan, dashboard
 from app.models import user as user_model
@@ -34,3 +35,5 @@ app.include_router(hasil_pemeriksaan.router)
 app.include_router(tagihan.router)
 app.include_router(tagihan.router_tagihan)
 app.include_router(dashboard.router)
+
+app.mount("/", StaticFiles(directory="front_end", html=True), name="frontend")
