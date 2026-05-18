@@ -17,7 +17,6 @@ class NilaiNormalService:
                 jenis_kelamin=data.jenis_kelamin,
                 usia_hari_min=data.usia_hari_min or 0,
                 usia_hari_max=data.usia_hari_max or 99999,
-                jenis_nilai=data.jenis_nilai,
                 nilai_bawah=data.nilai_bawah,
                 nilai_atas=data.nilai_atas,
                 operator=data.operator,
@@ -32,7 +31,6 @@ class NilaiNormalService:
             return {
                 "id_nilai_normal": nilai.id_nilai_normal,
                 "id_pemeriksaan": nilai.id_pemeriksaan,
-                "jenis_nilai": nilai.jenis_nilai,
             }
 
     def get_nilai_normal(self, id_nilai_normal: int):
@@ -46,7 +44,6 @@ class NilaiNormalService:
             "jenis_kelamin": n.jenis_kelamin,
             "usia_hari_min": n.usia_hari_min,
             "usia_hari_max": n.usia_hari_max,
-            "jenis_nilai": n.jenis_nilai,
             "nilai_bawah": n.nilai_bawah,
             "nilai_atas": n.nilai_atas,
             "operator": n.operator,
@@ -65,7 +62,6 @@ class NilaiNormalService:
                 "jenis_kelamin": n.jenis_kelamin,
                 "usia_hari_min": n.usia_hari_min,
                 "usia_hari_max": n.usia_hari_max,
-                "jenis_nilai": n.jenis_nilai,
                 "nilai_bawah": n.nilai_bawah,
                 "nilai_atas": n.nilai_atas,
                 "operator": n.operator,
@@ -86,7 +82,6 @@ class NilaiNormalService:
                 "jenis_kelamin": n.jenis_kelamin,
                 "usia_hari_min": n.usia_hari_min,
                 "usia_hari_max": n.usia_hari_max,
-                "jenis_nilai": n.jenis_nilai,
                 "nilai_bawah": n.nilai_bawah,
                 "nilai_atas": n.nilai_atas,
                 "operator": n.operator,
@@ -100,6 +95,7 @@ class NilaiNormalService:
     def compute_status_nilai(
         self,
         id_pemeriksaan: int,
+        jenis_nilai: str,
         nilai_bawah: Optional[float] = None,
         nilai_atas: Optional[float] = None,
         nilai_value: Optional[float] = None,
@@ -123,7 +119,7 @@ class NilaiNormalService:
         if not matched:
             return None
 
-        if matched.jenis_nilai == "range":
+        if jenis_nilai == "range":
             val = nilai_value if nilai_value is not None else nilai_atas
             if val is None:
                 return None
@@ -133,7 +129,7 @@ class NilaiNormalService:
                 return "H"
             return "N"
 
-        elif matched.jenis_nilai == "operator":
+        elif jenis_nilai == "operator":
             val = nilai_value if nilai_value is not None else nilai_atas
             if val is None:
                 return None
@@ -150,7 +146,7 @@ class NilaiNormalService:
                     return "N" if val >= norm_val else "L"
             return None
 
-        elif matched.jenis_nilai == "text":
+        elif jenis_nilai == "text":
             if nilai_text is None:
                 return None
             if matched.nilai_text and nilai_text.strip().lower() == matched.nilai_text.strip().lower():
@@ -172,8 +168,6 @@ class NilaiNormalService:
                 n.usia_hari_min = data.usia_hari_min
             if data.usia_hari_max is not None:
                 n.usia_hari_max = data.usia_hari_max
-            if data.jenis_nilai is not None:
-                n.jenis_nilai = data.jenis_nilai
             if data.nilai_bawah is not None:
                 n.nilai_bawah = data.nilai_bawah
             if data.nilai_atas is not None:
@@ -190,7 +184,6 @@ class NilaiNormalService:
             return {
                 "id_nilai_normal": n.id_nilai_normal,
                 "id_pemeriksaan": n.id_pemeriksaan,
-                "jenis_nilai": n.jenis_nilai,
             }
 
     def delete_nilai_normal(self, id_nilai_normal: int):

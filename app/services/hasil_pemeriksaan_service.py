@@ -53,16 +53,16 @@ class HasilPemeriksaanService:
             return n
         return rows[0] if rows else None
 
-    def _format_nilai_normal(self, n):
+    def _format_nilai_normal(self, n, jenis_nilai):
         if not n:
             return None
-        if n.jenis_nilai == "range":
+        if jenis_nilai == "range":
             bawah = f"{n.nilai_bawah:g}" if n.nilai_bawah is not None else "-"
             atas = f"{n.nilai_atas:g}" if n.nilai_atas is not None else "-"
             return f"{bawah} - {atas}"
-        if n.jenis_nilai == "operator":
+        if jenis_nilai == "operator":
             return f"{n.operator or ''} {n.nilai_operator:g}".strip() if n.nilai_operator is not None else n.operator
-        if n.jenis_nilai == "text":
+        if jenis_nilai == "text":
             return n.nilai_text
         return None
 
@@ -83,11 +83,13 @@ class HasilPemeriksaanService:
         for r in rows:
             pemeriksaan = self.db.query(Pemeriksaan).get(r.id_pemeriksaan)
             normal = self._get_nilai_normal_match(r.id_pemeriksaan, jenis_kelamin, umur_hari)
+            jenis_nilai = pemeriksaan.jenis_nilai if pemeriksaan else "range"
             result.append({
                 "id": r.id,
                 "id_pemeriksaan_pasien": r.id_pemeriksaan_pasien,
                 "id_pemeriksaan": r.id_pemeriksaan,
                 "nama_pemeriksaan": pemeriksaan.nama_pemeriksaan if pemeriksaan else None,
+                "satuan": pemeriksaan.satuan if pemeriksaan else None,
                 "nilai_bawah": r.nilai_bawah,
                 "nilai_atas": r.nilai_atas,
                 "nilai_value": r.nilai_value,
@@ -95,14 +97,14 @@ class HasilPemeriksaanService:
                 "status_nilai": r.status_nilai,
                 "keterangan": r.keterangan,
                 "nilai_normal": {
-                    "jenis_nilai": normal.jenis_nilai,
+                    "jenis_nilai": jenis_nilai,
                     "nilai_bawah": normal.nilai_bawah,
                     "nilai_atas": normal.nilai_atas,
                     "operator": normal.operator,
                     "nilai_operator": normal.nilai_operator,
                     "nilai_text": normal.nilai_text,
                     "keterangan": normal.keterangan,
-                    "label": self._format_nilai_normal(normal),
+                    "label": self._format_nilai_normal(normal, jenis_nilai),
                 } if normal else None,
             })
         return result
@@ -139,9 +141,13 @@ class HasilPemeriksaanService:
                     umur_hari = kunjungan.umur_hari_pasien
                     jenis_kelamin = pasien.jenis_kelamin if pasien else None
 
+                    pemeriksaan = self.db.query(Pemeriksaan).get(hasil.id_pemeriksaan)
+                    jenis_nilai = pemeriksaan.jenis_nilai if pemeriksaan else "range"
+
                     nilai_svc = NilaiNormalService(self.db)
                     status = nilai_svc.compute_status_nilai(
                         id_pemeriksaan=hasil.id_pemeriksaan,
+                        jenis_nilai=jenis_nilai,
                         nilai_bawah=hasil.nilai_bawah,
                         nilai_atas=hasil.nilai_atas,
                         nilai_value=hasil.nilai_value,

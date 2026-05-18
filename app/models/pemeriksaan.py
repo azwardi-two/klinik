@@ -11,5 +11,7 @@ class Pemeriksaan(Base):
     biaya = Column(Integer, default=0)
     lama_waktu = Column(Integer, default=0)
     kategori = Column(String(100), nullable=True)
+    jenis_nilai = Column(String(10), nullable=False, default="range")
+    satuan = Column(String(50), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())

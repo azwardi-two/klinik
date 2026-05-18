@@ -10,7 +10,6 @@ class NilaiNormal(Base):
     jenis_kelamin = Column(String(1), nullable=True)
     usia_hari_min = Column(Integer, default=0)
     usia_hari_max = Column(Integer, default=99999)
-    jenis_nilai = Column(String(10), nullable=False)
     nilai_bawah = Column(Float, nullable=True)
     nilai_atas = Column(Float, nullable=True)
     operator = Column(String(2), nullable=True)

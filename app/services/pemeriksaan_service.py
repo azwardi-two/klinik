@@ -16,6 +16,8 @@ class PemeriksaanService:
                 biaya=data.biaya or 0,
                 lama_waktu=data.lama_waktu or 0,
                 kategori=data.kategori,
+                jenis_nilai=data.jenis_nilai or "range",
+                satuan=data.satuan,
             )
 
             repo.create(pemeriksaan)
@@ -27,6 +29,8 @@ class PemeriksaanService:
                 "biaya": pemeriksaan.biaya,
                 "lama_waktu": pemeriksaan.lama_waktu,
                 "kategori": pemeriksaan.kategori,
+                "jenis_nilai": pemeriksaan.jenis_nilai,
+                "satuan": pemeriksaan.satuan,
             }
 
     def get_pemeriksaan(self, id_pemeriksaan: int):
@@ -40,6 +44,8 @@ class PemeriksaanService:
             "biaya": p.biaya,
             "lama_waktu": p.lama_waktu,
             "kategori": p.kategori,
+            "jenis_nilai": p.jenis_nilai,
+            "satuan": p.satuan,
             "created_at": str(p.created_at) if p.created_at else None,
             "updated_at": str(p.updated_at) if p.updated_at else None,
         }
@@ -54,6 +60,8 @@ class PemeriksaanService:
                 "biaya": r.biaya,
                 "lama_waktu": r.lama_waktu,
                 "kategori": r.kategori,
+                "jenis_nilai": r.jenis_nilai,
+                "satuan": r.satuan,
                 "created_at": str(r.created_at) if r.created_at else None,
                 "updated_at": str(r.updated_at) if r.updated_at else None,
             }
@@ -75,6 +83,10 @@ class PemeriksaanService:
                 p.lama_waktu = data.lama_waktu
             if data.kategori is not None:
                 p.kategori = data.kategori
+            if data.jenis_nilai is not None:
+                p.jenis_nilai = data.jenis_nilai
+            if data.satuan is not None:
+                p.satuan = data.satuan
 
             uow.flush()
 
@@ -84,6 +96,8 @@ class PemeriksaanService:
                 "biaya": p.biaya,
                 "lama_waktu": p.lama_waktu,
                 "kategori": p.kategori,
+                "jenis_nilai": p.jenis_nilai,
+                "satuan": p.satuan,
             }
 
     def delete_pemeriksaan(self, id_pemeriksaan: int):
