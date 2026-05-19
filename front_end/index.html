@@ -301,6 +301,7 @@
     <div class="card">
         <div class="toolbar">
             <select id="filterKunjunganHasil" onchange="loadHasilList()" style="flex:1;"><option value="">-- Pilih Kunjungan --</option></select>
+            <button class="btn btn-primary" onclick="cetakLabPDF(document.getElementById('filterKunjunganHasil').value)">🖨 Cetak PDF</button>
         </div>
         <div style="overflow-x:auto;"><table><thead><tr>
             <th>Pemeriksaan</th><th>Nilai Normal</th><th>Nilai Bawah</th><th>Nilai Atas</th><th>Nilai Value</th><th>Nilai Text</th><th>Status</th><th>Aksi</th>
@@ -340,8 +341,8 @@
 </div>
 
 <script>
-//const BASE = "http://127.0.0.1:8000";
-const BASE = "https://silicious-keneth-pseudoallegoristic.ngrok-free.dev";
+const BASE = "http://127.0.0.1:8000";
+//const BASE = "https://silicious-keneth-pseudoallegoristic.ngrok-free.dev";
 
 // ── AUTH ─────────────────────────────────────────────
 function getToken() { return localStorage.getItem("access_token"); }
@@ -1081,6 +1082,20 @@ function refreshTagihan() { loadTagihan(); }
 function editPemeriksaan(d) { openModalPemeriksaan(d); }
 function editPaket(d) { openModalPaket(d); }
 function editNilaiNormal(d) { openModalNilaiNormal(d); }
+
+// ── CETAK PDF ────────────────────────────────────────
+async function cetakLabPDF(idKunjungan) {
+    if (!idKunjungan) { alert("Pilih kunjungan terlebih dahulu"); return; }
+    try {
+        const r = await api(`${BASE}/kunjungan/${idKunjungan}/cetak-lab`);
+        if (!r.ok) { const e = await r.json(); throw new Error(e.detail || "Gagal generate PDF"); }
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+    } catch(e) {
+        alert("Gagal mencetak PDF: " + e.message);
+    }
+}
 
 // ── ON LOAD ─────────────────────────────────────────
 window.onload=function() {

@@ -1,0 +1,9 @@
+fastapi
+sqlalchemy
+pymysql
+pydantic
+python-jose[cryptography]
+passlib[bcrypt]
+python-dotenv
+python-dateutil
+fpdf2
