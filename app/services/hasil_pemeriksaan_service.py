@@ -7,6 +7,7 @@ from app.models.pemeriksaan import Pemeriksaan
 from app.models.pemeriksaan_pasien import PemeriksaanPasien
 from app.models.pemeriksaan_lab import PemeriksaanLab
 from app.models.pasien import Pasien
+from app.models.tabung import Tabung, TabungPemeriksaan
 from app.repositories.hasil_pemeriksaan import HasilPemeriksaanRepository
 from app.services.nilai_normal_service import NilaiNormalService
 from app.core.uow import UnitOfWork
@@ -40,6 +41,21 @@ class HasilPemeriksaanService:
                     if lab:
                         lab.status = "SELESAI"
                         lab.jam_selesai = lab.jam_selesai or now
+
+            tp_rows = self.db.query(TabungPemeriksaan).filter(
+                TabungPemeriksaan.id_pemeriksaan_pasien == pp.id
+            ).all()
+            for tp in tp_rows:
+                pp_ids = [x.id_pemeriksaan_pasien for x in self.db.query(TabungPemeriksaan).filter(
+                    TabungPemeriksaan.id_tabung == tp.id_tabung
+                ).all()]
+                terkait = self.db.query(PemeriksaanPasien).filter(
+                    PemeriksaanPasien.id.in_(pp_ids)
+                ).all()
+                if terkait and all(r.status == "SELESAI" for r in terkait):
+                    tabung = self.db.query(Tabung).get(tp.id_tabung)
+                    if tabung:
+                        tabung.status = "SELESAI"
 
     def _get_nilai_normal_match(self, id_pemeriksaan, jenis_kelamin=None, umur_hari=None):
         rows = self.db.query(NilaiNormal).filter(

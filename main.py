@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from app.core.database import Base, engine
-from app.router import kunjungan, pasien, auth, pemeriksaan, paket_pemeriksaan, nilai_normal, pemeriksaan_pasien, hasil_pemeriksaan, tagihan, dashboard, klinik, laporan
+from app.router import kunjungan, pasien, auth, pemeriksaan, paket_pemeriksaan, nilai_normal, pemeriksaan_pasien, hasil_pemeriksaan, tagihan, dashboard, klinik, laporan, jenis_tabung, tabung as tabung_router, barang, pemeriksaan_jenis_tabung
 from app.models import user as user_model
 from app.models import pemeriksaan as pemeriksaan_model
 from app.models import paket_pemeriksaan as paket_pemeriksaan_model
@@ -11,6 +11,10 @@ from app.models import pemeriksaan_pasien as pemeriksaan_pasien_model
 from app.models import hasil_pemeriksaan as hasil_pemeriksaan_model
 from app.models import tagihan as tagihan_model
 from app.models import klinik as klinik_model
+from app.models import jenis_tabung as jenis_tabung_model
+from app.models import tabung as tabung_model
+from app.models import barang as barang_model
+from app.models import pemeriksaan_jenis_tabung as pemeriksaan_jenis_tabung_model
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -38,5 +42,9 @@ app.include_router(tagihan.router_tagihan)
 app.include_router(dashboard.router)
 app.include_router(klinik.router)
 app.include_router(laporan.router)
+app.include_router(jenis_tabung.router)
+app.include_router(tabung_router.router)
+app.include_router(barang.router)
+app.include_router(pemeriksaan_jenis_tabung.router)
 
 app.mount("/", StaticFiles(directory="front_end", html=True), name="frontend")

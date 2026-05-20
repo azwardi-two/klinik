@@ -12,6 +12,8 @@ from app.models.pemeriksaan_pasien import PemeriksaanPasien
 from app.models.hasil_pemeriksaan import HasilPemeriksaan
 from app.models.pemeriksaan import Pemeriksaan
 from app.models.nilai_normal import NilaiNormal
+from app.models.tagihan import TagihanPasien, TagihanPasienDetail
+from app.models.paket_pemeriksaan import PaketPemeriksaan
 
 
 def _hitung_umur(tgl_lahir: date, tgl_kunjungan: date) -> str:
@@ -239,6 +241,166 @@ def generate_lab_pdf(db: Session, id_kunjungan: int) -> bytes:
     pdf.ln(10)
 
     # --- Signature ---
+    pdf.set_text_color(51, 51, 51)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(WIDTH, 6, "Mengetahui,", align="R", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(14)
+    pdf.cell(WIDTH, 6, "Dokter", align="R", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+    sig_x = PAGE_W - MARGIN - 50
+    pdf.line(sig_x, pdf.get_y(), PAGE_W - MARGIN, pdf.get_y())
+    pdf.ln(1)
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_text_color(153, 153, 153)
+    pdf.cell(WIDTH, 5, "( ___________________ )", align="R")
+
+    return bytes(pdf.output())
+
+
+def generate_tagihan_pdf(db: Session, id_kunjungan: int) -> bytes:
+    kunjungan = db.query(Kunjungan).filter(Kunjungan.id_kunjungan == id_kunjungan).first()
+    if not kunjungan:
+        raise ValueError("Kunjungan tidak ditemukan")
+
+    pasien = db.query(Pasien).filter(Pasien.id == kunjungan.idpasien).first()
+    if not pasien:
+        raise ValueError("Pasien tidak ditemukan")
+
+    klinik = db.query(Klinik).first()
+    nama_klinik = klinik.nama if klinik else "NAMA KLINIK"
+    alamat_klinik = klinik.alamat if klinik else ""
+    telepon_klinik = klinik.telepon if klinik else ""
+
+    tagihan = db.query(TagihanPasien).filter(TagihanPasien.id_kunjungan == id_kunjungan).first()
+    if not tagihan:
+        raise ValueError("Tagihan belum dibuat untuk kunjungan ini")
+
+    details = db.query(TagihanPasienDetail).filter(
+        TagihanPasienDetail.id_tagihan == tagihan.id
+    ).all()
+
+    pp_ids = [d.id_pemeriksaan_pasien for d in details]
+    pp_rows = db.query(PemeriksaanPasien).filter(PemeriksaanPasien.id.in_(pp_ids)).all()
+    pp_map = {pp.id: pp for pp in pp_rows}
+
+    px_ids = list(set(pp.id_pemeriksaan for pp in pp_rows if pp.jenis == "SATUAN" and pp.id_pemeriksaan))
+    paket_ids = list(set(pp.id_paket for pp in pp_rows if pp.jenis == "PAKET" and pp.id_paket))
+
+    px_map = {}
+    if px_ids:
+        for px in db.query(Pemeriksaan).filter(Pemeriksaan.id_pemeriksaan.in_(px_ids)).all():
+            px_map[px.id_pemeriksaan] = px.nama_pemeriksaan
+
+    paket_map = {}
+    if paket_ids:
+        for p in db.query(PaketPemeriksaan).filter(PaketPemeriksaan.id_paket.in_(paket_ids)).all():
+            paket_map[p.id_paket] = p.nama_paket
+
+    table_rows = []
+    no = 0
+    for d in details:
+        pp = pp_map.get(d.id_pemeriksaan_pasien)
+        if not pp:
+            continue
+        no += 1
+        if pp.jenis == "SATUAN":
+            nama_item = px_map.get(pp.id_pemeriksaan, f"Pemeriksaan #{pp.id_pemeriksaan}")
+        elif pp.jenis == "PAKET":
+            nama_item = paket_map.get(pp.id_paket, f"Paket #{pp.id_paket}")
+        else:
+            nama_item = f"Item #{pp.id}"
+        table_rows.append({
+            "no": str(no),
+            "nama": nama_item,
+            "biaya": d.biaya or 0,
+        })
+
+    MARGIN = 10
+    PAGE_W = 210
+    WIDTH = PAGE_W - 2 * MARGIN
+    pdf = FPDF(orientation="P", unit="mm", format="A4")
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.add_page()
+
+    # --- Header ---
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.set_text_color(26, 115, 232)
+    pdf.cell(WIDTH, 10, nama_klinik, align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_text_color(85, 85, 85)
+    pdf.cell(WIDTH, 6, alamat_klinik, align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(WIDTH, 6, f"Telp: {telepon_klinik}", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(2)
+
+    pdf.set_draw_color(26, 115, 232)
+    pdf.set_line_width(0.6)
+    y = pdf.get_y()
+    pdf.line(MARGIN, y, PAGE_W - MARGIN, y)
+    pdf.ln(6)
+
+    # --- Title ---
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_text_color(51, 51, 51)
+    pdf.cell(WIDTH, 8, "TAGIHAN PEMERIKSAAN LABORATORIUM", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(6)
+
+    # --- Patient & Tagihan Info ---
+    pdf.set_text_color(0, 0, 0)
+    label_w = 42
+    sep_w = 5
+    val_w = WIDTH - label_w - sep_w
+    umur_str = _hitung_umur(pasien.tgl_lahir, kunjungan.tgl_kunjungan)
+    info = [
+        ("No. Rekam Medis", pasien.no_rm or "-"),
+        ("Nama Pasien", pasien.nama),
+        ("Jenis Kelamin", "Laki-laki" if pasien.jenis_kelamin == "L" else "Perempuan" if pasien.jenis_kelamin == "P" else pasien.jenis_kelamin or "-"),
+        ("Alamat", pasien.alamat or "-"),
+        ("Umur", umur_str),
+        ("No. Kunjungan", kunjungan.no_reg_kunjungan or "-"),
+        ("No. Tagihan", f"#{tagihan.id}"),
+        ("Tgl. Tagihan", tagihan.tgl_tagihan.strftime("%d %b %Y") if tagihan.tgl_tagihan else "-"),
+        ("Status", "LUNAS" if tagihan.status_tagihan == "LUNAS" else "BELUM"),
+    ]
+    for label, value in info:
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(label_w, 7, label, align="L")
+        pdf.set_font("Helvetica", "", 10)
+        pdf.cell(sep_w, 7, ":")
+        pdf.cell(val_w, 7, value, new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(6)
+
+    # --- Table ---
+    col_widths = [8, 100, 62]
+    headers = ["No.", "Nama Pemeriksaan", "Biaya (Rp)"]
+
+    pdf.set_font("Helvetica", "B", 9)
+    pdf.set_fill_color(26, 115, 232)
+    pdf.set_text_color(255, 255, 255)
+    for i, h in enumerate(headers):
+        pdf.cell(col_widths[i], 7, h, border=1, align="C", fill=True)
+    pdf.ln()
+
+    pdf.set_font("Helvetica", "", 9)
+    total = 0
+    if not table_rows:
+        pdf.set_text_color(153, 153, 153)
+        pdf.cell(sum(col_widths), 10, "Belum ada item tagihan", border=1, align="C", new_x="LMARGIN", new_y="NEXT")
+    else:
+        for row in table_rows:
+            total += row["biaya"]
+            pdf.set_text_color(0, 0, 0)
+            pdf.cell(col_widths[0], 7, row["no"], border=1, align="C")
+            pdf.cell(col_widths[1], 7, row["nama"], border=1, align="L")
+            pdf.cell(col_widths[2], 7, f"Rp {row['biaya']:,}".replace(",", "."), border=1, align="R", new_x="LMARGIN", new_y="NEXT")
+
+        # --- Total Row ---
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_fill_color(235, 241, 252)
+        pdf.cell(col_widths[0] + col_widths[1], 8, "TOTAL", border=1, align="R", fill=True)
+        pdf.cell(col_widths[2], 8, f"Rp {total:,}".replace(",", "."), border=1, align="R", fill=True, new_x="LMARGIN", new_y="NEXT")
+
+    # --- Signature ---
+    pdf.ln(16)
     pdf.set_text_color(51, 51, 51)
     pdf.set_font("Helvetica", "", 10)
     pdf.cell(WIDTH, 6, "Mengetahui,", align="R", new_x="LMARGIN", new_y="NEXT")

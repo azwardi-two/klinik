@@ -172,6 +172,10 @@
             <a onclick="showSection('pemeriksaan-pasien')" data-section="pemeriksaan-pasien">🧪 Periksa Pasien</a>
             <a onclick="showSection('hasil')" data-section="hasil">📋 Input Hasil</a>
             <a onclick="showSection('tagihan')" data-section="tagihan">💰 Tagihan</a>
+            <a onclick="showSection('jenis-tabung')" data-section="jenis-tabung">🧴 Jenis Tabung</a>
+            <a onclick="showSection('mapping-tabung')" data-section="mapping-tabung">🔗 Mapping Tabung</a>
+            <a onclick="showSection('tabung')" data-section="tabung">📦 Tabung</a>
+            <a onclick="showSection('inventory')" data-section="inventory">📊 Inventory</a>
             <a onclick="handleLogout()" class="logout">🚪 Logout</a>
         </nav>
     </div>
@@ -327,6 +331,76 @@
             <strong>Total: Rp <span id="tagihanTotal">0</span></strong>
             <span id="tagihanStatus"></span>
             <button class="btn btn-success" id="btnBayar" onclick="bayarTagihan()">💳 Bayar</button>
+            <button class="btn btn-primary" onclick="cetakTagihanPDF(document.getElementById('filterKunjunganTagihan').value)">🖨 Cetak PDF Tagihan</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== JENIS TABUNG ===== -->
+<div class="section" id="sec-jenis-tabung">
+    <div class="card">
+        <div class="toolbar">
+            <input type="text" id="filterJenisTabung" placeholder="Cari jenis tabung..." oninput="loadJenisTabung()">
+            <div class="spacer"></div>
+            <button class="btn btn-primary" onclick="openModalJenisTabung()">+ Tambah</button>
+        </div>
+        <div style="overflow-x:auto;"><table><thead><tr>
+            <th>Nama</th><th>Warna</th><th>Volume (ml)</th><th>Keterangan</th><th>Aksi</th>
+        </tr></thead><tbody id="tblJenisTabung"></tbody></table></div>
+    </div>
+</div>
+
+<!-- ===== MAPPING PEMERIKSAAN → JENIS TABUNG ===== -->
+<div class="section" id="sec-mapping-tabung">
+    <div class="card">
+        <div class="toolbar">
+            <input type="text" id="filterMapping" placeholder="Cari mapping..." oninput="loadMappingTabung()">
+            <div class="spacer"></div>
+            <button class="btn btn-primary" onclick="openModalMapping()">+ Tambah Mapping</button>
+        </div>
+        <div style="overflow-x:auto;"><table><thead><tr>
+            <th>Pemeriksaan</th><th>Jenis Tabung</th><th>Warna</th><th>Aksi</th>
+        </tr></thead><tbody id="tblMapping"></tbody></table></div>
+    </div>
+</div>
+
+<!-- ===== TABUNG ===== -->
+<div class="section" id="sec-tabung">
+    <div class="card">
+        <div class="toolbar">
+            <div class="spacer"></div>
+            <input type="text" id="scanBarcodeInput" placeholder="Scan barcode..." onkeydown="if(event.key==='Enter')scanBarcode()" style="width:200px">
+            <button class="btn btn-primary" onclick="scanBarcode()">🔍 Scan</button>
+        </div>
+        <div style="overflow-x:auto;"><table><thead><tr>
+            <th>Barcode</th><th>Jenis Tabung</th><th>Warna</th><th>Pasien</th><th>No. Kunjungan</th><th>Waktu Ambil</th><th>Status</th><th>Aksi</th>
+        </tr></thead><tbody id="tblTabung"></tbody></table></div>
+    </div>
+    <div class="card" id="tabungDetailCard" style="display:none;">
+        <h3 id="tabungDetailTitle">Detail Tabung</h3>
+        <div id="tabungDetailBody"></div>
+    </div>
+</div>
+
+<!-- ===== INVENTORY ===== -->
+<div class="section" id="sec-inventory">
+    <div class="card">
+        <div class="toolbar">
+            <input type="text" id="filterBarang" placeholder="Cari barang..." oninput="loadBarangList()">
+            <div class="spacer"></div>
+            <button class="btn btn-outline" onclick="switchInventoryTab('barang')" id="tabBarangBtn">📦 Barang</button>
+            <button class="btn btn-outline" onclick="switchInventoryTab('stok')" id="tabStokBtn">📊 Stok</button>
+            <button class="btn btn-primary" onclick="openModalBarang()">+ Tambah Barang</button>
+        </div>
+        <div id="invBarangPanel">
+            <div style="overflow-x:auto;"><table><thead><tr>
+                <th>Nama</th><th>Kategori</th><th>Satuan</th><th>Harga</th><th>Stok Min</th><th>Aksi</th>
+            </tr></thead><tbody id="tblBarang"></tbody></table></div>
+        </div>
+        <div id="invStokPanel" style="display:none;">
+            <div style="overflow-x:auto;"><table><thead><tr>
+                <th>Nama Barang</th><th>Kategori</th><th>Stok</th><th>Stok Min</th><th>Status</th><th>Aksi</th>
+            </tr></thead><tbody id="tblStok"></tbody></table></div>
         </div>
     </div>
 </div>
@@ -424,7 +498,7 @@ function showSection(id) {
     document.getElementById("sec-"+id).classList.add("active");
     document.querySelectorAll(".sidebar nav a").forEach(a=>a.classList.remove("active"));
     document.querySelector(`.sidebar nav a[data-section="${id}"]`).classList.add("active");
-    const titles={pemeriksaan:"Master Pemeriksaan",paket:"Master Paket Pemeriksaan","nilai-normal":"Nilai Normal",kunjungan:"Kunjungan","pemeriksaan-pasien":"Pemeriksaan Pasien",hasil:"Input Hasil Pemeriksaan",tagihan:"Tagihan"};
+    const titles={pemeriksaan:"Master Pemeriksaan",paket:"Master Paket Pemeriksaan","nilai-normal":"Nilai Normal",kunjungan:"Kunjungan","pemeriksaan-pasien":"Pemeriksaan Pasien",hasil:"Input Hasil Pemeriksaan",tagihan:"Tagihan","jenis-tabung":"Jenis Tabung","mapping-tabung":"Mapping Pemeriksaan ke Tabung",tabung:"Tabung Pemeriksaan",inventory:"Inventory"};
     document.getElementById("pageTitle").textContent=titles[id]||id;
     if (id==="pemeriksaan") loadPemeriksaan();
     else if (id==="paket") loadPaket();
@@ -433,6 +507,10 @@ function showSection(id) {
     else if (id==="pemeriksaan-pasien") { loadKunjunganDropdown("filterKunjunganPP", function(){ if(document.getElementById("filterKunjunganPP").value) loadPemeriksaanPasien(); }); }
     else if (id==="hasil") { loadKunjunganDropdown("filterKunjunganHasil", function(){ if(document.getElementById("filterKunjunganHasil").value) loadHasilList(); }); }
     else if (id==="tagihan") { loadKunjunganDropdown("filterKunjunganTagihan", function(){ if(document.getElementById("filterKunjunganTagihan").value) loadTagihan(); }); }
+    else if (id==="jenis-tabung") loadJenisTabung();
+    else if (id==="mapping-tabung") loadMappingTabung();
+    else if (id==="tabung") { loadTabungList(); }
+    else if (id==="inventory") { loadBarangList(); }
 }
 
 function closeModal() { document.getElementById("modalOverlay").classList.remove("open"); }
@@ -1095,6 +1173,367 @@ async function cetakLabPDF(idKunjungan) {
     } catch(e) {
         alert("Gagal mencetak PDF: " + e.message);
     }
+}
+
+async function cetakTagihanPDF(idKunjungan) {
+    if (!idKunjungan) { alert("Pilih kunjungan terlebih dahulu"); return; }
+    try {
+        const r = await api(`${BASE}/kunjungan/${idKunjungan}/cetak-tagihan`);
+        if (!r.ok) { const e = await r.json(); throw new Error(e.detail || "Gagal generate PDF tagihan"); }
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+    } catch(e) {
+        alert("Gagal mencetak PDF tagihan: " + e.message);
+    }
+}
+
+// ── JENIS TABUNG ────────────────────────────────────
+function openModalJenisTabung(data) {
+    const isEdit = !!data;
+    const nama = data ? data.nama_jenis_tabung : '';
+    const warna = data ? (data.warna || '') : '';
+    const volume = data ? (data.volume_ml || '') : '';
+    const ket = data ? (data.keterangan || '') : '';
+    const id = data ? data.id_jenis_tabung : null;
+    document.getElementById("modalOverlay").classList.add("open");
+    document.getElementById("modalContent").innerHTML = `
+        <h3>${isEdit ? 'Edit' : 'Tambah'} Jenis Tabung</h3>
+        <div class="form-group"><label>Nama Jenis Tabung</label><input type="text" id="fJtNama" value="${nama}" placeholder="e.g. EDTA"></div>
+        <div class="form-group"><label>Warna</label><input type="text" id="fJtWarna" value="${warna}" placeholder="e.g. Ungu"></div>
+        <div class="form-group"><label>Volume (ml)</label><input type="number" step="0.1" id="fJtVolume" value="${volume}"></div>
+        <div class="form-group"><label>Keterangan</label><textarea id="fJtKeterangan" rows="2">${ket}</textarea></div>
+        <div class="toolbar" style="margin-top:12px">
+            <button class="btn btn-primary" onclick="saveJenisTabung(${id || ''})">Simpan</button>
+            <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+        </div>`;
+}
+
+async function saveJenisTabung(id) {
+    const body = {
+        nama_jenis_tabung: document.getElementById("fJtNama").value.trim(),
+        warna: document.getElementById("fJtWarna").value.trim() || null,
+        volume_ml: parseFloat(document.getElementById("fJtVolume").value) || null,
+        keterangan: document.getElementById("fJtKeterangan").value.trim() || null,
+    };
+    if (!body.nama_jenis_tabung) { alert("Nama jenis tabung wajib diisi"); return; }
+    try {
+        if (id) await api(`${BASE}/jenis-tabung/${id}`, { method: "PUT", body: JSON.stringify(body) });
+        else await api(`${BASE}/jenis-tabung/`, { method: "POST", body: JSON.stringify(body) });
+        closeModal(); loadJenisTabung();
+    } catch (e) { alert("Error: " + (e.detail || e.message)); }
+}
+
+async function deleteJenisTabung(id) {
+    if (!confirm("Hapus jenis tabung ini?")) return;
+    try { await api(`${BASE}/jenis-tabung/${id}`, { method: "DELETE" }); loadJenisTabung(); }
+    catch (e) { alert("Error: " + (e.detail || e.message)); }
+}
+
+async function loadJenisTabung() {
+    try {
+        const filter = (document.getElementById("filterJenisTabung").value||"").toLowerCase();
+        const r = await api(`${BASE}/jenis-tabung/`);
+        const rows = await r.json();
+        const filtered = rows.filter(r => r.nama_jenis_tabung.toLowerCase().includes(filter));
+        document.getElementById("tblJenisTabung").innerHTML = filtered.map(r => `
+            <tr>
+                <td>${r.nama_jenis_tabung}</td>
+                <td><span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${r.warna||'#ccc'};vertical-align:middle;margin-right:4px"></span>${r.warna||'-'}</td>
+                <td>${r.volume_ml ? r.volume_ml + ' ml' : '-'}</td>
+                <td>${r.keterangan||'-'}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="openModalJenisTabung(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏️</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteJenisTabung(${r.id_jenis_tabung})">🗑️</button>
+                </td>
+            </tr>
+        `).join('') || '<tr><td colspan="5" class="text-muted">Belum ada data</td></tr>';
+    } catch (e) {}
+}
+
+// ── MAPPING PEMERIKSAAN → JENIS TABUNG ──────────────
+async function loadMappingTabung() {
+    try {
+        const filter = (document.getElementById("filterMapping").value||"").toLowerCase();
+        const resp = await api(`${BASE}/pemeriksaan-jenis-tabung/`);
+        const rows = await resp.json();
+        const filtered = filter ? rows.filter(r => (r.nama_pemeriksaan||'').toLowerCase().includes(filter) || (r.nama_jenis_tabung||'').toLowerCase().includes(filter)) : rows;
+        document.getElementById("tblMapping").innerHTML = filtered.map(r => `
+            <tr>
+                <td>${r.nama_pemeriksaan||'-'}</td>
+                <td>${r.nama_jenis_tabung||'-'}</td>
+                <td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${r.warna||'#ccc'};vertical-align:middle;margin-right:4px"></span>${r.warna||'-'}</td>
+                <td><button class="btn btn-sm btn-danger" onclick="deleteMapping(${r.id})">🗑️</button></td>
+            </tr>
+        `).join('') || '<tr><td colspan="4" class="text-muted">Belum ada mapping</td></tr>';
+    } catch (e) {}
+}
+
+async function openModalMapping() {
+    try {
+        const rpx = await api(`${BASE}/pemeriksaan/`);
+        const pxList = await rpx.json();
+        const rjt = await api(`${BASE}/jenis-tabung/`);
+        const jtList = await rjt.json();
+        document.getElementById("modalOverlay").classList.add("open");
+        document.getElementById("modalContent").innerHTML = `
+            <h3>Tambah Mapping Pemeriksaan → Tabung</h3>
+            <div class="form-group"><label>Pemeriksaan</label>
+                <select id="fMapPemeriksaan"><option value="">-- Pilih --</option>
+                    ${pxList.map(p => `<option value="${p.id_pemeriksaan}">${p.nama_pemeriksaan}</option>`).join('')}
+                </select>
+            </div>
+            <div class="form-group"><label>Jenis Tabung</label>
+                <select id="fMapJenisTabung"><option value="">-- Pilih --</option>
+                    ${jtList.map(j => `<option value="${j.id_jenis_tabung}">${j.nama_jenis_tabung} (${j.warna||'-'})</option>`).join('')}
+                </select>
+            </div>
+            <div class="toolbar" style="margin-top:12px">
+                <button class="btn btn-primary" onclick="saveMapping()">Simpan</button>
+                <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+            </div>`;
+    } catch (e) { alert("Error: " + (e.detail || e.message)); }
+}
+
+async function saveMapping() {
+    const idPx = document.getElementById("fMapPemeriksaan").value;
+    const idJt = document.getElementById("fMapJenisTabung").value;
+    if (!idPx || !idJt) { alert("Pilih pemeriksaan dan jenis tabung"); return; }
+    try {
+        await api(`${BASE}/pemeriksaan-jenis-tabung/`, {
+            method: "POST",
+            body: JSON.stringify({ id_pemeriksaan: parseInt(idPx), id_jenis_tabung: parseInt(idJt) })
+        });
+        closeModal(); loadMappingTabung();
+    } catch (e) { alert("Error: " + (e.detail || e.message)); }
+}
+
+async function deleteMapping(id) {
+    if (!confirm("Hapus mapping ini?")) return;
+    try { await api(`${BASE}/pemeriksaan-jenis-tabung/${id}`, { method: "DELETE" }); loadMappingTabung(); }
+    catch (e) { alert("Error: " + (e.detail || e.message)); }
+}
+
+// ── TABUNG ───────────────────────────────────────────
+async function loadTabungList() {
+    try {
+        const resp = await api(`${BASE}/tabung/`);
+        const rows = await resp.json();
+        document.getElementById("tblTabung").innerHTML = rows.map(r => `
+            <tr>
+                <td><code>${r.barcode}</code></td>
+                <td>${r.nama_jenis_tabung||'-'}</td>
+                <td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${r.warna||'#ccc'};vertical-align:middle;margin-right:4px"></span>${r.warna||'-'}</td>
+                <td>${r.nama_pasien||'-'}</td>
+                <td>${r.no_reg_kunjungan||'-'}</td>
+                <td>${r.waktu_ambil||'-'}</td>
+                <td><span class="badge ${r.status==='SELESAI'?'badge-selesai':r.status==='TERISI'?'badge-proses':'badge-order'}">${r.status}</span></td>
+                <td>${r.status==='READY'?`<button class="btn btn-sm btn-success" onclick="ambilSampel(${r.id_tabung})">💉 Ambil</button>`:'-'}</td>
+            </tr>
+        `).join('') || '<tr><td colspan="8" class="text-muted">Belum ada tabung</td></tr>';
+    } catch (e) {}
+}
+
+async function ambilSampel(id) {
+    try {
+        await api(`${BASE}/tabung/${id}/ambil`, { method: "PUT" });
+        loadTabungList(); alert("Sampel berhasil diambil!");
+    } catch (e) { alert("Error: " + (e.detail || e.message)); }
+}
+
+async function scanBarcode() {
+    const bc = document.getElementById("scanBarcodeInput").value.trim();
+    if (!bc) { alert("Masukkan barcode"); return; }
+    try {
+        const resp = await api(`${BASE}/tabung/barcode/${bc}`);
+        const r = await resp.json();
+        document.getElementById("tabungDetailCard").style.display = "block";
+        document.getElementById("tabungDetailTitle").textContent = `Tabung: ${r.barcode}`;
+        document.getElementById("tabungDetailBody").innerHTML = `
+            <p><strong>Jenis:</strong> ${r.nama_jenis_tabung||'-'} (${r.warna||'-'})</p>
+            <p><strong>Pasien:</strong> ${r.nama_pasien||'-'}</p>
+            <p><strong>Kunjungan:</strong> ${r.no_reg_kunjungan||'-'}</p>
+            <p><strong>Status:</strong> ${r.status}</p>
+            <p><strong>Waktu Ambil:</strong> ${r.waktu_ambil||'Belum diambil'}</p>
+            ${r.status==='READY'?`<button class="btn btn-sm btn-success" onclick="ambilSampel(${r.id_tabung})">💉 Ambil Sampel</button>`:''}
+        `;
+    } catch (e) {
+        document.getElementById("tabungDetailCard").style.display = "none";
+        alert("Tabung tidak ditemukan: " + (e.detail||e.message));
+    }
+}
+
+// ── INVENTORY ────────────────────────────────────────
+let inventoryTab = 'barang';
+
+function switchInventoryTab(tab) {
+    inventoryTab = tab;
+    document.getElementById("invBarangPanel").style.display = tab === 'barang' ? 'block' : 'none';
+    document.getElementById("invStokPanel").style.display = tab === 'stok' ? 'block' : 'none';
+    document.getElementById("tabBarangBtn").className = tab === 'barang' ? 'btn btn-primary' : 'btn btn-outline';
+    document.getElementById("tabStokBtn").className = tab === 'stok' ? 'btn btn-primary' : 'btn btn-outline';
+    if (tab === 'stok') loadStokList();
+}
+
+function openModalBarang(data) {
+    const isEdit = !!data;
+    const nama = data ? data.nama_barang : '';
+    const kategori = data ? (data.kategori||'BAHAN_PAKAI') : 'BAHAN_PAKAI';
+    const satuan = data ? (data.satuan||'') : '';
+    const harga = data ? (data.harga_satuan||'') : '';
+    const stokMin = data ? (data.stok_minimum||'') : '';
+    const id = data ? data.id_barang : null;
+    document.getElementById("modalOverlay").classList.add("open");
+    document.getElementById("modalContent").innerHTML = `
+        <h3>${isEdit ? 'Edit' : 'Tambah'} Barang</h3>
+        <div class="form-group"><label>Nama Barang</label><input type="text" id="fBrgNama" value="${nama}"></div>
+        <div class="form-group"><label>Kategori</label>
+            <select id="fBrgKategori">
+                <option value="TABUNG" ${kategori==='TABUNG'?'selected':''}>Tabung</option>
+                <option value="REAGEN" ${kategori==='REAGEN'?'selected':''}>Reagen</option>
+                <option value="BAHAN_PAKAI" ${kategori==='BAHAN_PAKAI'?'selected':''}>Bahan Pakai</option>
+            </select>
+        </div>
+        <div class="form-group"><label>Satuan</label><input type="text" id="fBrgSatuan" value="${satuan}" placeholder="pcs, ml, test"></div>
+        <div class="form-group"><label>Harga Satuan (Rp)</label><input type="number" id="fBrgHarga" value="${harga}"></div>
+        <div class="form-group"><label>Stok Minimum</label><input type="number" id="fBrgStokMin" value="${stokMin}"></div>
+        <div class="toolbar" style="margin-top:12px">
+            <button class="btn btn-primary" onclick="saveBarang(${id || ''})">Simpan</button>
+            <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+        </div>`;
+}
+
+async function saveBarang(id) {
+    const body = {
+        nama_barang: document.getElementById("fBrgNama").value.trim(),
+        kategori: document.getElementById("fBrgKategori").value,
+        satuan: document.getElementById("fBrgSatuan").value.trim() || null,
+        harga_satuan: parseInt(document.getElementById("fBrgHarga").value) || 0,
+        stok_minimum: parseInt(document.getElementById("fBrgStokMin").value) || 0,
+    };
+    if (!body.nama_barang) { alert("Nama barang wajib diisi"); return; }
+    try {
+        if (id) await api(`${BASE}/barang/${id}`, { method: "PUT", body: JSON.stringify(body) });
+        else await api(`${BASE}/barang/`, { method: "POST", body: JSON.stringify(body) });
+        closeModal(); loadBarangList();
+    } catch (e) { alert("Error: " + (e.detail || e.message)); }
+}
+
+async function deleteBarang(id) {
+    if (!confirm("Hapus barang ini?")) return;
+    try { await api(`${BASE}/barang/${id}`, { method: "DELETE" }); loadBarangList(); }
+    catch (e) { alert("Error: " + (e.detail || e.message)); }
+}
+
+async function loadBarangList() {
+    try {
+        const filter = (document.getElementById("filterBarang").value||"").toLowerCase();
+        const resp = await api(`${BASE}/barang/`);
+        const rows = await resp.json();
+        const filtered = rows.filter(r => r.nama_barang.toLowerCase().includes(filter));
+        document.getElementById("tblBarang").innerHTML = filtered.map(r => `
+            <tr>
+                <td>${r.nama_barang}</td>
+                <td>${r.kategori||'-'}</td>
+                <td>${r.satuan||'-'}</td>
+                <td>Rp ${(r.harga_satuan||0).toLocaleString()}</td>
+                <td>${r.stok_minimum||0}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="openModalBarang(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏️</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteBarang(${r.id_barang})">🗑️</button>
+                </td>
+            </tr>
+        `).join('') || '<tr><td colspan="6" class="text-muted">Belum ada barang</td></tr>';
+    } catch (e) {}
+}
+
+async function loadStokList() {
+    try {
+        const resp = await api(`${BASE}/barang/`);
+        const rows = await resp.json();
+        document.getElementById("tblStok").innerHTML = rows.map(r => {
+            const status = r.stok <= r.stok_minimum ? 'badge-low' : 'badge-normal';
+            const label = r.stok <= r.stok_minimum ? 'Menipis' : 'Aman';
+            return `<tr>
+                <td>${r.nama_barang}</td>
+                <td>${r.kategori||'-'}</td>
+                <td><strong>${r.stok}</strong> ${r.satuan||''}</td>
+                <td>${r.stok_minimum||0}</td>
+                <td><span class="badge ${status}">${label}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-success" onclick="barangMasuk(${r.id_barang})">+ Masuk</button>
+                    <button class="btn btn-sm btn-warning" onclick="barangKeluar(${r.id_barang})">- Keluar</button>
+                    <button class="btn btn-sm btn-info" onclick="lihatMutasi(${r.id_barang})">📋 Mutasi</button>
+                </td>
+            </tr>`;
+        }).join('');
+    } catch (e) {}
+}
+
+function barangMasuk(id) {
+    document.getElementById("modalOverlay").classList.add("open");
+    document.getElementById("modalContent").innerHTML = `
+        <h3>Barang Masuk</h3>
+        <div class="form-group"><label>Jumlah</label><input type="number" id="fMsJumlah" min="1" value="10"></div>
+        <div class="toolbar" style="margin-top:12px">
+            <button class="btn btn-success" onclick="simpanBarangMasuk(${id})">Simpan</button>
+            <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+        </div>`;
+}
+
+async function simpanBarangMasuk(id) {
+    const jumlah = parseInt(document.getElementById("fMsJumlah").value);
+    if (!jumlah || jumlah < 1) { alert("Jumlah tidak valid"); return; }
+    try {
+        await api(`${BASE}/barang/${id}/masuk`, { method: "POST", body: JSON.stringify({ jumlah }) });
+        closeModal(); loadStokList();
+    } catch (e) { alert("Error: " + (e.detail || e.message)); }
+}
+
+function barangKeluar(id) {
+    document.getElementById("modalOverlay").classList.add("open");
+    document.getElementById("modalContent").innerHTML = `
+        <h3>Barang Keluar</h3>
+        <div class="form-group"><label>Jumlah</label><input type="number" id="fKlJumlah" min="1" value="1"></div>
+        <div class="toolbar" style="margin-top:12px">
+            <button class="btn btn-warning" onclick="simpanBarangKeluar(${id})">Simpan</button>
+            <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+        </div>`;
+}
+
+async function simpanBarangKeluar(id) {
+    const jumlah = parseInt(document.getElementById("fKlJumlah").value);
+    if (!jumlah || jumlah < 1) { alert("Jumlah tidak valid"); return; }
+    try {
+        await api(`${BASE}/barang/${id}/keluar`, { method: "POST", body: JSON.stringify({ jumlah_pakai: jumlah }) });
+        closeModal(); loadStokList();
+    } catch (e) { alert("Error: " + (e.detail || e.message)); }
+}
+
+async function lihatMutasi(id) {
+    try {
+        const rm = await api(`${BASE}/barang/${id}/mutasi`);
+        const mutasi = await rm.json();
+        const rb = await api(`${BASE}/barang/${id}`);
+        const barang = await rb.json();
+        document.getElementById("modalOverlay").classList.add("open");
+        document.getElementById("modalContent").innerHTML = `
+            <h3>Mutasi: ${barang.nama_barang}</h3>
+            <div style="overflow-x:auto;max-height:400px;overflow-y:auto"><table><thead><tr>
+                <th>Tgl</th><th>Tipe</th><th>Jumlah</th>
+            </tr></thead><tbody>
+                ${(mutasi||[]).map(m => `
+                    <tr>
+                        <td>${m.created_at||'-'}</td>
+                        <td><span class="badge ${m.tipe==='MASUK'?'badge-selesai':'badge-low'}">${m.tipe}</span></td>
+                        <td>${m.jumlah}</td>
+                    </tr>
+                `).join('') || '<tr><td colspan="3" class="text-muted">Belum ada mutasi</td></tr>'}
+            </tbody></table></div>
+            <div class="toolbar" style="margin-top:12px">
+                <button class="btn btn-outline" onclick="closeModal()">Tutup</button>
+            </div>`;
+    } catch (e) { alert("Error: " + (e.detail || e.message)); }
 }
 
 // ── ON LOAD ─────────────────────────────────────────

@@ -6,9 +6,12 @@ from app.models.kunjungan import Kunjungan
 from app.models.pemeriksaan import Pemeriksaan
 from app.models.paket_pemeriksaan import PaketPemeriksaan, PaketPemeriksaanDetail
 from app.models.hasil_pemeriksaan import HasilPemeriksaan
+from app.models.pemeriksaan_jenis_tabung import PemeriksaanJenisTabung
+from app.models.tabung import Tabung
 from app.repositories.pemeriksaan_pasien import PemeriksaanPasienRepository
 from app.repositories.pemeriksaan_lab import PemeriksaanLabRepository
 from app.repositories.hasil_pemeriksaan import HasilPemeriksaanRepository
+from app.services.tabung_service import TabungService
 from app.core.uow import UnitOfWork
 
 
@@ -155,6 +158,53 @@ class PemeriksaanPasienService:
                     raise Exception(f"Jenis '{item.jenis}' tidak valid")
 
             self._sync_lab_target(lab)
+
+            tabung_service = TabungService(self.db)
+            for item in data.items:
+                if item.jenis == "SATUAN":
+                    mappings = self.db.query(PemeriksaanJenisTabung).filter(
+                        PemeriksaanJenisTabung.id_pemeriksaan == item.id_pemeriksaan
+                    ).all()
+                    for m in mappings:
+                        tabung = self.db.query(Tabung).filter(
+                            Tabung.id_pemeriksaan_lab == lab.id_pemeriksaan_lab,
+                            Tabung.id_jenis_tabung == m.id_jenis_tabung,
+                            Tabung.status != "SELESAI"
+                        ).first()
+                        if not tabung:
+                            tabung = tabung_service.create_tabung(lab.id_pemeriksaan_lab, m.id_jenis_tabung)
+                        pp_id = None
+                        for r in results:
+                            if r.get("id_pemeriksaan") == item.id_pemeriksaan:
+                                pp_id = r["id"]
+                                break
+                        if pp_id:
+                            tabung_service.link_tabung_ke_pemeriksaan(tabung.id_tabung, pp_id)
+                elif item.jenis == "PAKET":
+                    paket = self.db.query(PaketPemeriksaan).get(item.id_paket)
+                    if paket:
+                        details = self.db.query(PaketPemeriksaanDetail).filter(
+                            PaketPemeriksaanDetail.id_paket == item.id_paket
+                        ).all()
+                        pp_id = None
+                        for r in results:
+                            if r.get("jenis") == "PAKET" and r.get("id_paket") == item.id_paket:
+                                pp_id = r["id"]
+                                break
+                        if pp_id:
+                            for d in details:
+                                mappings = self.db.query(PemeriksaanJenisTabung).filter(
+                                    PemeriksaanJenisTabung.id_pemeriksaan == d.id_pemeriksaan
+                                ).all()
+                                for m in mappings:
+                                    tabung = self.db.query(Tabung).filter(
+                                        Tabung.id_pemeriksaan_lab == lab.id_pemeriksaan_lab,
+                                        Tabung.id_jenis_tabung == m.id_jenis_tabung,
+                                        Tabung.status != "SELESAI"
+                                    ).first()
+                                    if not tabung:
+                                        tabung = tabung_service.create_tabung(lab.id_pemeriksaan_lab, m.id_jenis_tabung)
+                                    tabung_service.link_tabung_ke_pemeriksaan(tabung.id_tabung, pp_id)
 
             return results
 
