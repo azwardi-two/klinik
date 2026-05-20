@@ -17,7 +17,6 @@ from app.models import barang as barang_model
 from app.models import pemeriksaan_jenis_tabung as pemeriksaan_jenis_tabung_model
 from fastapi.middleware.cors import CORSMiddleware
 
-
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="API Klinik")
