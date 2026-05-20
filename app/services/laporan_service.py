@@ -182,9 +182,10 @@ def generate_lab_pdf(db: Session, id_kunjungan: int) -> bytes:
     info = [
         ("No. Rekam Medis", pasien.no_rm or "-"),
         ("Nama Pasien", pasien.nama),
+        ("Jenis Kelamin", "Laki-laki" if pasien.jenis_kelamin == "L" else "Perempuan" if pasien.jenis_kelamin == "P" else pasien.jenis_kelamin or "-"),
         ("Alamat", pasien.alamat or "-"),
         ("Umur", umur_str),
-        ("Tanggal Kunjungan", str(kunjungan.tgl_kunjungan)),
+        ("Tanggal Kunjungan", kunjungan.tgl_kunjungan.strftime("%d %b %Y")),
     ]
     for label, value in info:
         pdf.set_font("Helvetica", "B", 10)
@@ -195,8 +196,8 @@ def generate_lab_pdf(db: Session, id_kunjungan: int) -> bytes:
     pdf.ln(6)
 
     # --- Results Table ---
-    col_widths = [42, 8, 22, 60, 26, 32]
-    headers = ["Nama Pemeriksaan", "No.", "Hasil", "Nilai Normal", "Tanda", "Satuan"]
+    col_widths = [8, 42, 22, 60, 26, 32]
+    headers = ["No.", "Nama Pemeriksaan", "Hasil", "Nilai Normal", "Tanda", "Satuan"]
 
     pdf.set_font("Helvetica", "B", 9)
     pdf.set_fill_color(26, 115, 232)
@@ -212,8 +213,8 @@ def generate_lab_pdf(db: Session, id_kunjungan: int) -> bytes:
     else:
         for row in table_rows:
             pdf.set_text_color(0, 0, 0)
-            pdf.cell(col_widths[0], 7, row["nama"], border=1, align="L")
-            pdf.cell(col_widths[1], 7, row["no"], border=1, align="C")
+            pdf.cell(col_widths[0], 7, row["no"], border=1, align="C")
+            pdf.cell(col_widths[1], 7, row["nama"], border=1, align="L")
             pdf.cell(col_widths[2], 7, row["hasil"], border=1, align="C")
             pdf.cell(col_widths[3], 7, row["normal"], border=1, align="L")
             r, g, b = row["tanda_rgb"]
